@@ -25,3 +25,10 @@ export const eunNeun = (w: string) => josa(w, '은', '는');
 export const iGa = (w: string) => josa(w, '이', '가');
 export const eulReul = (w: string) => josa(w, '을', '를');
 export const gwaWa = (w: string) => josa(w, '과', '와');
+/** (으)로: 받침이 없거나 ㄹ 받침이면 "로" */
+export function euro(w: string): string {
+  const ch = w.charCodeAt(w.length - 1);
+  if (ch < 0xac00 || ch > 0xd7a3) return w + '로';
+  const jong = (ch - 0xac00) % 28;
+  return w + (jong === 0 || jong === 8 ? '로' : '으로');
+}
