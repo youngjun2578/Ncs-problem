@@ -33,8 +33,10 @@ export function describe(spec: ChartSpec): string {
     }
     case 'pie': {
       const total = spec.values.reduce((a, b) => a + b, 0);
-      const pts = spec.labels.map((l, i) => `${l} ${num((spec.values[i] / total) * 100)}%`).join(', ');
-      return `${spec.title ? spec.title + ' ' : ''}원그래프 ${pts}`;
+      const pts = spec.showValues
+        ? spec.labels.map((l, i) => `${l} ${num(spec.values[i])}`).join(', ')
+        : spec.labels.map((l, i) => `${l} ${num((spec.values[i] / total) * 100)}%`).join(', ');
+      return `${spec.title ? spec.title + ' ' : ''}원그래프${spec.unit ? ` (단위: ${spec.unit})` : ''} ${pts}`;
     }
     case 'scatter':
       return `${spec.title ? spec.title + ' ' : ''}점그래프 (가로: ${spec.xLabel}, 세로: ${spec.yLabel}) 점 ${spec.xs.length}개`;
@@ -75,7 +77,7 @@ function series(spec: SeriesSpec & { type: 'bar' | 'line'; horizontal?: boolean 
   const L = 44, R = 12, T = 22, B = 28;
   const pw = w - L - R, ph = h - T - B;
   const y = (v: number) => T + ph - (v / top) * ph;
-  out += `<text class="c-unit" x="${L - 6}" y="${T - 10}" text-anchor="end">(${esc(spec.unit)})</text>`;
+  out += `<text class="c-unit" x="4" y="${T - 10}">(${esc(spec.unit)})</text>`;
   for (let t = 0; t <= top + 1e-9; t += step) {
     out += `<line class="${t === 0 ? 'c-axis' : 'c-grid'}" x1="${L}" y1="${f1(y(t))}" x2="${L + pw}" y2="${f1(y(t))}"/>`;
     out += `<text class="c-tick" x="${L - 6}" y="${f1(y(t) + 4)}" text-anchor="end">${num(t)}</text>`;
@@ -122,7 +124,11 @@ function pie(spec: PieSpec, size: ChartSize): string {
     const lx = cx + (r + 10) * Math.cos(mid), ly = cy + (r + 10) * Math.sin(mid);
     const anchor = Math.cos(mid) > 0.2 ? 'start' : Math.cos(mid) < -0.2 ? 'end' : 'middle';
     const dy = Math.sin(mid) > 0.5 ? 10 : Math.sin(mid) < -0.5 ? -2 : 4;
-    const txt = spec.showPercent ? `${spec.labels[i]} ${num((v / total) * 100)}%` : spec.labels[i];
+    const txt = spec.showPercent
+      ? `${spec.labels[i]} ${num((v / total) * 100)}%`
+      : spec.showValues
+        ? `${spec.labels[i]} ${num(v)}`
+        : spec.labels[i];
     labels.push(`<text class="c-label" x="${f1(lx)}" y="${f1(ly + dy)}" text-anchor="${anchor}">${esc(txt)}</text>`);
     a0 = a1;
   });
@@ -170,8 +176,11 @@ export function renderTable(t: TableSpec): string {
     .join('')}</tbody></table>`;
 }
 
+const NOTE = '<span class="fig-note">연습용 가상 자료</span>';
+
 export function renderFigure(f: Figure): string {
-  if (f.kind === 'table') return `<figure class="figure">${renderTable(f.table)}</figure>`;
-  const title = f.spec.title ? `<figcaption>${esc(f.spec.title)}</figcaption>` : '';
+  if (f.kind === 'table') return `<figure class="figure">${renderTable(f.table)}<p class="fig-foot">${NOTE}</p></figure>`;
+  const unit = f.spec.type === 'pie' && f.spec.unit ? ` <span class="unit">(단위: ${esc(f.spec.unit)})</span>` : '';
+  const title = `<figcaption>${f.spec.title ? `<span class="fig-title">${esc(f.spec.title)}</span>${unit}` : ''}${NOTE}</figcaption>`;
   return `<figure class="figure">${title}${renderChart({ ...f.spec, title: undefined } as ChartSpec)}</figure>`;
 }

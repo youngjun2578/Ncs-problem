@@ -31,14 +31,15 @@ export function buildChoices<V>(rng: Rng, g: Generated<V>): { choices: Choice[];
   const seen = new Set([answerLabel]);
   const pool: Choice[] = [];
 
-  for (const w of rng.shuffle(g.wrongs)) {
+  // 같은 값이 여러 실수에서 나오면 템플릿이 먼저 적은(더 구체적인) 태그를 남긴다
+  for (const w of g.wrongs) {
     if (!isValidValue(w.value)) continue;
     const label = g.format(w.value);
     if (seen.has(label) || hasBadToken(label)) continue;
     seen.add(label);
     pool.push({ label, mistakeTag: w.mistakeTag, chart: g.chart?.(w.value) });
   }
-  const picked = pool.slice(0, CHOICE_COUNT - 1);
+  const picked = rng.shuffle(pool).slice(0, CHOICE_COUNT - 1);
 
   let fillers = 0;
   if (g.near) {

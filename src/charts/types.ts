@@ -23,6 +23,9 @@ export interface PieSpec {
   values: number[];
   /** 조각에 % 표시 */
   showPercent?: boolean;
+  /** 조각에 원래 값 표시 (unit과 함께) */
+  showValues?: boolean;
+  unit?: string;
 }
 export interface ScatterSpec {
   type: 'scatter';
