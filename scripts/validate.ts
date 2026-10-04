@@ -23,14 +23,14 @@ import type { Figure } from '../src/charts/types';
 import { analyze, judge } from '../src/report/analyze';
 
 const PER_TEMPLATE = Number(process.env.PER_TEMPLATE ?? 3000);
-const SETS = Number(process.env.SETS ?? 3000);
+const SETS = Number(process.env.SETS ?? 5000);
 /** 기본은 고정 시드(재현 가능). SEED_OFFSET=임의값 으로 다른 범위를 탐색할 수 있다. */
 const SEED_OFFSET = Number(process.env.SEED_OFFSET ?? 0);
 const MIN_TEMPLATES_PER_AREA = 5;
 const MAX_FILLER_RATE = 0.25;
 const MIN_PHRASINGS = 3;
 /** 단계별 구현 중에는 비어 있는 영역을 경고로만 처리한다. 모든 영역이 갖춰지면 true. */
-const STRICT_COVERAGE = false;
+const STRICT_COVERAGE = true;
 
 const errors: string[] = [];
 const fail = (msg: string) => {

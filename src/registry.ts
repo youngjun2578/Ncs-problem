@@ -18,6 +18,11 @@ import { compare } from './templates/chart-read/compare';
 import { maxGrowth } from './templates/chart-read/maxGrowth';
 import { perCapita } from './templates/chart-read/perCapita';
 import { pointPct } from './templates/chart-read/pointPct';
+import { barMake } from './templates/chart-make/barMake';
+import { lineMake } from './templates/chart-make/lineMake';
+import { pieMake } from './templates/chart-make/pieMake';
+import { typeFit } from './templates/chart-make/typeFit';
+import { rateMake } from './templates/chart-make/rateMake';
 
 export const TEMPLATES: Template[] = [
   // 기초연산
@@ -26,4 +31,6 @@ export const TEMPLATES: Template[] = [
   mean, median, counting, probability, permcomb,
   // 도표분석
   growth, share, compare, maxGrowth, perCapita, pointPct,
+  // 도표작성
+  typeFit, barMake, lineMake, pieMake, rateMake,
 ];

@@ -29,7 +29,7 @@ export function describe(spec: ChartSpec): string {
     case 'line': {
       const kind = spec.type === 'line' ? '꺾은선그래프' : spec.horizontal ? '가로 막대그래프' : '막대그래프';
       const pts = spec.labels.map((l, i) => `${l} ${num(spec.values[i])}`).join(', ');
-      return `${spec.title ? spec.title + ' ' : ''}${kind} (단위: ${spec.unit}) ${pts}`;
+      return `${spec.title ? spec.title + ' ' : ''}${kind}${spec.unit ? ` (단위: ${spec.unit})` : ''} ${pts}`;
     }
     case 'pie': {
       const total = spec.values.reduce((a, b) => a + b, 0);
@@ -70,14 +70,14 @@ function series(spec: SeriesSpec & { type: 'bar' | 'line'; horizontal?: boolean 
       if (spec.showValues) out += `<text class="c-value" x="${f1(x(v) + 4)}" y="${f1(cy + 4)}">${num(v)}</text>`;
     });
     out += `<line class="c-axis" x1="${L}" y1="${T}" x2="${L}" y2="${T + ph}"/>`;
-    out += `<text class="c-unit" x="${w - R}" y="${T - 2}" text-anchor="end">(${esc(spec.unit)})</text>`;
+    if (spec.unit) out += `<text class="c-unit" x="${w - R}" y="${T - 2}" text-anchor="end">(${esc(spec.unit)})</text>`;
     return out + '</svg>';
   }
 
   const L = 44, R = 12, T = 22, B = 28;
   const pw = w - L - R, ph = h - T - B;
   const y = (v: number) => T + ph - (v / top) * ph;
-  out += `<text class="c-unit" x="4" y="${T - 10}">(${esc(spec.unit)})</text>`;
+  if (spec.unit) out += `<text class="c-unit" x="4" y="${T - 10}">(${esc(spec.unit)})</text>`;
   for (let t = 0; t <= top + 1e-9; t += step) {
     out += `<line class="${t === 0 ? 'c-axis' : 'c-grid'}" x1="${L}" y1="${f1(y(t))}" x2="${L + pw}" y2="${f1(y(t))}"/>`;
     out += `<text class="c-tick" x="${L - 6}" y="${f1(y(t) + 4)}" text-anchor="end">${num(t)}</text>`;

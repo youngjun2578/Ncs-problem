@@ -1,6 +1,8 @@
 /* 성적표처럼 인쇄/PDF 저장 */
 @media print {
-  :root {
+  /* 다크모드 선택자보다 우선하도록 같은 선택자를 함께 쓴다 */
+  :root,
+  :root:not([data-theme='light']) {
     color-scheme: light;
     --bg: #fff;
     --surface: #f4f5f7;
@@ -26,6 +28,8 @@
     margin: 16mm 14mm;
   }
   body {
+    background: #fff;
+    color: #000;
     font-size: 10.5pt;
     line-height: 1.55;
   }
@@ -56,9 +60,11 @@
   .area-head {
     break-after: avoid;
   }
-  .area {
-    break-before: auto;
-    break-inside: avoid-page;
+  .area-head,
+  .kv,
+  .patterns li,
+  .plan li {
+    break-inside: avoid;
   }
   .item {
     break-inside: avoid;
