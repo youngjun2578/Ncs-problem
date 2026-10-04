@@ -39,10 +39,11 @@ function growth(rng: Rng): Generated {
     wrongs: [
       { value: round((diff / B) * 100, 1), mistakeTag: '기준량 혼동' },
       { value: round((B / A) * 100, 1), mistakeTag: '비율·증가율 혼동' },
-      { value: diff, mistakeTag: '증가량·증가율 혼동' },
+      // 증가량을 %로 착각: %처럼 보일 수 있는 크기일 때만
+      ...(diff < 100 ? [{ value: diff, mistakeTag: '증가량·증가율 혼동' as const }] : []),
       { value: round((A / B) * 100, 1), mistakeTag: '기준량 혼동' },
       { value: round((diff / ((A + B) / 2)) * 100, 1), mistakeTag: '기준량 혼동' },
-    ].filter((w) => w.value < 100) as Generated['wrongs'],
+    ],
     format: pctf,
     near: nearBy(r, 2.5),
     steps: [
