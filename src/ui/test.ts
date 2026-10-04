@@ -3,12 +3,8 @@ import { AREA_BY_ID } from '../areas';
 import { renderChart, renderFigure } from '../charts/render';
 import { CIRC, fmtClock, prefersReducedMotion } from './dom';
 
-export interface Attempt {
-  /** 고른 보기 번호 */
-  picked: number;
-  /** 이 문항에 쓴 시간(초) */
-  sec: number;
-}
+import type { Attempt } from '../report/analyze';
+export type { Attempt };
 
 const ADVANCE_MS = 380;
 

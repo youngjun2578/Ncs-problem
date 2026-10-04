@@ -19,6 +19,7 @@ import { hasAtMostDecimals } from '../src/engine/format';
 import { MISTAKES } from '../src/engine/mistakes';
 import { renderChart, renderTable } from '../src/charts/render';
 import type { Figure } from '../src/charts/types';
+import { analyze, judge } from '../src/report/analyze';
 
 const PER_TEMPLATE = Number(process.env.PER_TEMPLATE ?? 3000);
 const SETS = Number(process.env.SETS ?? 3000);
@@ -170,6 +171,36 @@ const areas = activeAreas.map((a) => a.id);
 const a1 = JSON.stringify(generateSet(TEMPLATES, 42, { areas, perArea: 3 }));
 const a2 = JSON.stringify(generateSet(TEMPLATES, 42, { areas, perArea: 3 }));
 if (a1 !== a2) fail('같은 시드에서 다른 세트가 나옴 (재현성 실패)');
+
+// 리포트 분석 규칙
+{
+  const set = generateSet(TEMPLATES, 7, { areas, perArea: 3 });
+  const right = set.map((q) => ({ picked: q.answerIndex, sec: 30 }));
+  const wrongPick = (q: (typeof set)[number]) => (q.answerIndex + 1) % 5;
+  const allRight = analyze(set, right, 360);
+  if (allRight.correct !== set.length || allRight.areas.some((a) => a.level !== 'stable')) fail('리포트: 모두 맞히면 모든 영역이 안정이어야 함');
+  if (allRight.areas.some((a) => a.patterns.length)) fail('리포트: 오답이 없는데 틀린 패턴이 나옴');
+
+  const allWrong = analyze(set, set.map((q) => ({ picked: wrongPick(q), sec: 30 })), 360);
+  if (allWrong.areas.some((a) => a.level !== 'focus')) fail('리포트: 모두 틀리면 모든 영역이 집중 필요여야 함');
+  for (const a of allWrong.areas) {
+    if (!a.patterns.length) fail(`리포트: ${a.meta.name} 오답인데 틀린 패턴 없음`);
+    if (a.study[0]?.reason !== '틀린 유형') fail(`리포트: ${a.meta.name} 학습 순서가 틀린 유형부터가 아님`);
+    if (new Set(a.study.map((s) => s.subtype)).size !== a.meta.studyOrder.length) fail(`리포트: ${a.meta.name} 학습 순서 누락/중복`);
+  }
+
+  // 첫 영역만 1문항 틀림 → 보완 필요, 우선순위 맨 앞
+  const firstArea = set[0].area;
+  const oneWrong = set.map((q, i) => ({ picked: i === 0 ? wrongPick(q) : q.answerIndex, sec: 30 }));
+  const r1 = analyze(set, oneWrong, 360);
+  const a1 = r1.areas.find((a) => a.meta.id === firstArea)!;
+  if (a1.level !== 'improve') fail(`리포트: 3문항 중 2문항 정답이면 보완 필요여야 함 (${a1.level})`);
+  if (r1.priority[0].meta.id !== firstArea) fail('리포트: 학습 우선순위가 수준 낮은 영역부터가 아님');
+  if (a1.patterns[0]?.tag !== set[0].choices[wrongPick(set[0])].mistakeTag) fail('리포트: 틀린 패턴이 고른 보기의 mistakeTag와 다름');
+
+  if (judge(1, 200, 75).level !== 'improve') fail('리포트: 모두 맞혀도 시간이 매우 길면 보완 필요여야 함');
+  if (judge(1 / 3, 30, 75).level !== 'focus') fail('리포트: 1/3 정답은 집중 필요여야 함');
+}
 
 if (errors.length) {
   console.error(`\n검증 실패 ${errors.length}건${errors.length >= 200 ? ' (200건까지 표시)' : ''}:`);
