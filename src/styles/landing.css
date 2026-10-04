@@ -1,0 +1,85 @@
+/* 랜딩 페이지 */
+.hero {
+  padding: var(--s7) 0 var(--s6);
+  border-bottom: 1px solid var(--rule);
+}
+.hero .title {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1.4;
+}
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s5);
+}
+.hero-meta {
+  margin-top: var(--s4);
+  font-size: 14px;
+  color: var(--muted);
+}
+.area-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: a;
+}
+.area-list li {
+  counter-increment: a;
+  display: grid;
+  grid-template-columns: 2.5em 1fr;
+  gap: var(--s1) var(--s3);
+  padding: var(--s4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.area-list li::before {
+  content: '0' counter(a);
+  grid-row: span 3;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-weight: 700;
+}
+.area-list h3 {
+  font-size: 17px;
+}
+.area-list p {
+  color: var(--ink-2);
+  font-size: 15px;
+}
+.area-list .types {
+  color: var(--muted);
+  font-size: 14px;
+}
+.steps-list {
+  margin: 0;
+  padding-left: 1.4em;
+  color: var(--ink-2);
+}
+.steps-list li {
+  margin-bottom: var(--s2);
+}
+.sample-paper {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: var(--s4);
+  margin-top: var(--s4);
+}
+.sample-paper .choices {
+  margin-top: var(--s4);
+}
+.sample-paper .choice {
+  cursor: default;
+  min-height: 0;
+  padding: var(--s2) var(--s3);
+  font-size: 15px;
+}
+.sample-paper .choice:hover {
+  border-color: var(--rule);
+}
+@media (min-width: 640px) {
+  .hero .title {
+    font-size: 38px;
+  }
+}

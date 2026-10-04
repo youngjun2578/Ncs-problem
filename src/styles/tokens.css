@@ -1,0 +1,82 @@
+/*
+ * 디자인 토큰
+ * - 주색: 딥 네이비 / 보조: 슬레이트 그레이 / 배경: 흰색
+ * - 포인트 색은 --accent 하나뿐 (현재 위치·주의 표시에만)
+ * - 초록/빨강(--ok/--bad)은 정답/오답 표시에만
+ * - 본문 대비 4.5:1 이상 (--muted 포함)
+ */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #f5f7fa;
+  --ink: #141d2e;
+  --ink-2: #384456;
+  --muted: #586374;
+  --rule: #d6dbe3;
+  --rule-strong: #a9b2bf;
+  --primary: #1b2f55;
+  --primary-hover: #243c6b;
+  --on-primary: #ffffff;
+  --primary-soft: #e9edf4;
+  --accent: #9a4d00;
+  --accent-soft: #fbf1e6;
+  --ok: #1d7a4c;
+  --bad: #b42318;
+  --focus: #2457c5;
+
+  /* 차트: 네이비 단일 색조 단계 (validate_palette --ordinal 통과) */
+  --chart-1: #1b2f55;
+  --chart-2: #34507f;
+  --chart-3: #4f6fa3;
+  --chart-4: #7491c2;
+  --chart-5: #9db2d8;
+  --chart-grid: #e3e7ed;
+  --chart-axis: #8a94a3;
+
+  --sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  --serif: 'Noto Serif KR', 'Nanum Myeongjo', 'AppleMyungjo', serif;
+
+  /* 4/8px 간격 스케일 */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 64px;
+
+  --radius: 6px;
+  --radius-lg: 8px;
+  --page: 720px;
+  --tap: 48px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #0f1623;
+    --surface: #151e2d;
+    --ink: #e7ebf1;
+    --ink-2: #c4ccd8;
+    --muted: #9ba6b6;
+    --rule: #283244;
+    --rule-strong: #3d495e;
+    --primary: #a9c0ea;
+    --primary-hover: #c3d4f2;
+    --on-primary: #0f1623;
+    --primary-soft: #1b2639;
+    --accent: #e8a866;
+    --accent-soft: #2a2117;
+    --ok: #62c793;
+    --bad: #f28b80;
+    --focus: #9cc0ff;
+    --chart-1: #c9d7f2;
+    --chart-2: #94aedd;
+    --chart-3: #6a8cc8;
+    --chart-4: #4a6ca6;
+    --chart-5: #34507f;
+    --chart-grid: #222c3c;
+    --chart-axis: #5f6b7e;
+  }
+}

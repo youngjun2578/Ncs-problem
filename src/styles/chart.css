@@ -1,0 +1,56 @@
+/* SVG 도표: 색은 모두 토큰. 텍스트는 잉크 색, 막대·선만 네이비 */
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 560px;
+  font-family: var(--sans);
+}
+.c-grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+.c-axis {
+  stroke: var(--chart-axis);
+  stroke-width: 1;
+}
+.c-bar {
+  fill: var(--chart-2);
+}
+.c-line {
+  fill: none;
+  stroke: var(--chart-2);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.c-dot {
+  fill: var(--chart-2);
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+.c-slice {
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+.c-s0 { fill: var(--chart-1); }
+.c-s1 { fill: var(--chart-2); }
+.c-s2 { fill: var(--chart-3); }
+.c-s3 { fill: var(--chart-4); }
+.c-s4 { fill: var(--chart-5); }
+.c-s5 { fill: var(--chart-axis); }
+.c-tick,
+.c-unit {
+  font-size: 12px;
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.c-label {
+  font-size: 12.5px;
+  fill: var(--ink-2);
+}
+.c-value {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
