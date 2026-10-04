@@ -15,7 +15,8 @@ import { AREAS } from '../src/areas';
 import { Rng } from '../src/engine/rng';
 import { buildChoices, hasBadToken, isValidValue } from '../src/engine/choices';
 import { generateSet } from '../src/engine/set';
-import { hasAtMostDecimals } from '../src/engine/format';
+import { hasAtMostDecimals, num } from '../src/engine/format';
+import { isFrac, fracLabel } from '../src/engine/frac';
 import { MISTAKES } from '../src/engine/mistakes';
 import { renderChart, renderTable } from '../src/charts/render';
 import type { Figure } from '../src/charts/types';
@@ -23,6 +24,8 @@ import { analyze, judge } from '../src/report/analyze';
 
 const PER_TEMPLATE = Number(process.env.PER_TEMPLATE ?? 3000);
 const SETS = Number(process.env.SETS ?? 3000);
+/** 기본은 고정 시드(재현 가능). SEED_OFFSET=임의값 으로 다른 범위를 탐색할 수 있다. */
+const SEED_OFFSET = Number(process.env.SEED_OFFSET ?? 0);
 const MIN_TEMPLATES_PER_AREA = 5;
 const MAX_FILLER_RATE = 0.25;
 const MIN_PHRASINGS = 3;
@@ -58,7 +61,8 @@ function skeleton(text: string): string {
     .replace(/(소금|설탕)/g, '$');
 }
 
-console.log(`템플릿 ${TEMPLATES.length}개 × ${PER_TEMPLATE}회 생성 검사`);
+console.log(`템플릿 ${TEMPLATES.length}개 × ${PER_TEMPLATE}회 생성 검사${SEED_OFFSET ? ` (SEED_OFFSET=${SEED_OFFSET})` : ''}`);
+const t0 = Date.now();
 const rows: Record<string, string | number>[] = [];
 
 for (const tpl of TEMPLATES) {
@@ -66,8 +70,9 @@ for (const tpl of TEMPLATES) {
   const tags = new Set<string>();
   let fillers = 0;
   let generated = 0;
+  const positions = [0, 0, 0, 0, 0];
   for (let i = 0; i < PER_TEMPLATE; i++) {
-    const rng = new Rng(i * 7919 + 13);
+    const rng = new Rng(i * 7919 + 13 + SEED_OFFSET);
     const id = `${tpl.id}#${i}`;
     let g;
     try {
@@ -81,6 +86,15 @@ for (const tpl of TEMPLATES) {
     if (g.wrongs.length < 4) fail(`${id}: 흔한 실수 오답이 4개 미만 (${g.wrongs.length})`);
     for (const w of g.wrongs) if (!(w.mistakeTag in MISTAKES)) fail(`${id}: 알 수 없는 mistakeTag ${w.mistakeTag}`);
     if (hasBadToken(g.text)) fail(`${id}: 문장에 비정상 값: ${g.text}`);
+    for (const t of [g.text, ...g.steps]) {
+      if (/\S {2,}\S|\(가\)|\(를\)|\(는\)|\(와\)|\(으\)로/.test(t)) fail(`${id}: 문장 다듬기 필요(이중 공백·괄호 조사): ${t}`);
+      if (/[가-힣]\(이\)|[가-힣]\(은\)|[가-힣]\(을\)/.test(t)) fail(`${id}: 괄호 조사 남음: ${t}`);
+    }
+    if (!/[?.)]$/.test(g.text.trim())) fail(`${id}: 문장이 물음표/마침표로 끝나지 않음: ${g.text}`);
+    // 해설에 정답 값이 실제로 나오는지 (해설과 정답의 불일치 방지)
+    const ansToken = typeof g.answer === 'number' ? num(g.answer) : isFrac(g.answer) ? fracLabel(g.answer) : typeof g.answer === 'string' ? g.answer : null;
+    const stepsText = g.steps.join(' ');
+    if (ansToken && !stepsText.includes(ansToken) && !stepsText.includes(g.format(g.answer)) && !g.chart) fail(`${id}: 해설에 정답 값(${ansToken})이 없음`);
     for (const s of g.steps) if (hasBadToken(s)) fail(`${id}: 해설에 비정상 값: ${s}`);
     if (g.steps.length === 0) fail(`${id}: 해설 없음`);
     if (g.figure) checkFigure(id, g.figure);
@@ -94,6 +108,7 @@ for (const tpl of TEMPLATES) {
     }
     generated++;
     const { choices, answerIndex } = built;
+    positions[answerIndex]++;
     fillers += built.fillers;
     if (choices.length !== 5) fail(`${id}: 보기 수 ${choices.length}`);
     if (new Set(choices.map((c) => c.label)).size !== choices.length) fail(`${id}: 보기 중복`);
@@ -114,6 +129,11 @@ for (const tpl of TEMPLATES) {
   if (fillerRate > MAX_FILLER_RATE) fail(`${tpl.id}: 근접값 채움 비율 ${(fillerRate * 100).toFixed(1)}% > ${MAX_FILLER_RATE * 100}%`);
   if (skeletons.size < MIN_PHRASINGS) fail(`${tpl.id}: 문장 틀 ${skeletons.size}가지 (최소 ${MIN_PHRASINGS})`);
   if (tags.size < 2) fail(`${tpl.id}: 실수 유형이 ${tags.size}가지뿐`);
+  // 정답 위치가 한쪽으로 쏠리지 않는지 (기대 20%)
+  const posRates = positions.map((p) => p / Math.max(1, generated));
+  // 허용 오차: 최소 ±5%p, 표본이 작으면 3 표준편차까지
+  const tol = Math.max(0.05, 3 * Math.sqrt((0.2 * 0.8) / Math.max(1, generated)));
+  if (posRates.some((r) => Math.abs(r - 0.2) > tol)) fail(`${tpl.id}: 정답 위치 분포 치우침 ${posRates.map((r) => (r * 100).toFixed(0) + '%').join('/')}`);
   rows.push({
     id: tpl.id,
     유형: tpl.subtype,
@@ -123,6 +143,7 @@ for (const tpl of TEMPLATES) {
     실수태그: tags.size,
     근접값: `${(fillerRate * 100).toFixed(1)}%`,
   });
+  if (process.env.VERBOSE) console.log(tpl.id, '정답 위치', posRates.map((r) => (r * 100).toFixed(1)).join(' / '));
 }
 console.table(rows);
 
@@ -148,7 +169,7 @@ if (new Set(TEMPLATES.map((t) => t.id)).size !== TEMPLATES.length) fail('템플�
 console.log(`세트 ${SETS}개 생성 검사 (영역 ${activeAreas.length}개 × 3문항)`);
 let setFail = 0;
 for (let s = 0; s < SETS; s++) {
-  const seed = (s * 2654435761) >>> 0;
+  const seed = (s * 2654435761 + SEED_OFFSET) >>> 0;
   let set;
   try {
     set = generateSet(TEMPLATES, seed, { areas: activeAreas.map((a) => a.id), perArea: 3 });
@@ -207,4 +228,4 @@ if (errors.length) {
   for (const e of errors) console.error(' - ' + e);
   process.exit(1);
 }
-console.log(`\n검증 통과: 템플릿 ${TEMPLATES.length}개, 세트 ${SETS}개 (실패 세트 ${setFail})`);
+console.log(`\n검증 통과: 템플릿 ${TEMPLATES.length}개, 세트 ${SETS}개 (실패 세트 ${setFail}), ${((Date.now() - t0) / 1000).toFixed(1)}초`);
