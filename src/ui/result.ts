@@ -125,18 +125,18 @@ export function renderResult(app: HTMLElement, qs: Problem[], attempts: Attempt[
       ${summaryTable(r)}
     </section>
 
-    <section aria-labelledby="h-plan">
-      <h2 id="h-plan" class="section-title">추천 학습 순서</h2>
-      <p class="muted">수준이 낮은 영역부터, 같은 수준이면 정답률과 풀이 시간을 기준으로 정렬했어요.</p>
-      ${plan(r)}
-    </section>
-
     ${r.areas.map(areaSection).join('')}
 
     <section aria-labelledby="h-items" class="items">
       <h2 id="h-items" class="section-title">문항별 해설</h2>
       <p class="muted no-print">각 문항을 누르면 풀이가 펼쳐집니다. 인쇄할 때는 모두 펼쳐서 출력돼요.</p>
       ${qs.map((q, i) => itemDetail(q, attempts[i], i)).join('')}
+    </section>
+
+    <section aria-labelledby="h-plan">
+      <h2 id="h-plan" class="section-title">추천 학습 순서</h2>
+      <p class="muted">수준이 낮은 영역부터, 같은 수준이면 정답률과 풀이 시간을 기준으로 정렬했어요.</p>
+      ${plan(r)}
     </section>
 
     <div class="actions no-print">
