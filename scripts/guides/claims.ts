@@ -38,6 +38,8 @@ export const CLAIMS: { slug: string; text: string; ok: () => boolean }[] = [
   { slug: 'growth-rate-change', text: '25% 오른 뒤 4% 내린 것을 21% 상승', ok: () => 25 - 4 === 21 && close(1.25 * 0.96, 1.2) },
   // %p
   { slug: 'percent-point-share', text: '20%에서 30%로 바뀌었다면 차이는 10%p이고, 처음보다 50% 늘어난', ok: () => 30 - 20 === 10 && (10 / 20) * 100 === 50 },
+  // %p의 범위: 0~100% 비율끼리의 차이는 100%p 이하(20%→50%의 30%p도 이 범위 안)
+  { slug: 'percent-point-share', text: '%p는 0%에서 100% 사이에 있는 두 비율의 차이이므로 100%p를 넘을 수 없습니다', ok: () => 100 - 0 === 100 && 50 - 20 === 30 && 30 <= 100 },
   // 순열·조합
   { slug: 'permutation-combination', text: '4명이라면 한 줄은 24가지, 원형은 24 ÷ 4 = 6가지', ok: () => 4 * 3 * 2 * 1 === 24 && 24 / 4 === 6 && 3 * 2 * 1 === 6 },
   // 확률
