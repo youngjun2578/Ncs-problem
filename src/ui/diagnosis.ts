@@ -17,7 +17,7 @@ function renderReady() {
   const n = areas.length * PER_AREA;
   app.innerHTML = `
   <main class="page" id="main">
-    <p class="eyebrow">수리능력 연습 진단</p>
+    <p class="eyebrow">NCS 수리능력 진단</p>
     <h1 class="title" tabindex="-1">시작 전 안내</h1>
     <dl class="facts">
       <div><dt>문항</dt><dd>${n}문항 · 5지선다<br><span class="sub">${areas.map((a) => a.name).join(' · ')} 영역별 ${PER_AREA}문항</span></dd></div>

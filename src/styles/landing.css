@@ -9,6 +9,14 @@
   font-size: 30px;
   line-height: 1.4;
 }
+.hero-sub {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  margin-top: var(--s2);
+}
 .hero-cta {
   display: flex;
   flex-wrap: wrap;

@@ -109,8 +109,8 @@ export function renderResult(app: HTMLElement, qs: Problem[], attempts: Attempt[
   app.innerHTML = `
   <main class="page report" id="main">
     <header class="doc-head">
-      <p class="eyebrow">NCS 수리능력 연습 진단</p>
-      <h1 class="title">영역별 진단 리포트</h1>
+      <p class="eyebrow">영역별 결과 · NCS 테스트</p>
+      <h1 class="title">NCS 수리능력 진단 리포트</h1>
       <dl class="meta">
         <div><dt>진단 일시</dt><dd>${when}</dd></div>
         <div><dt>문항 구성</dt><dd>${r.total}문항 (영역별 ${perArea}문항)</dd></div>
