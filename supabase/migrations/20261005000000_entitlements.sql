@@ -25,6 +25,9 @@ comment on column public.entitlements.order_id is '결제 주문 번호(3단계�
 -- 행 단위 보안
 alter table public.entitlements enable row level security;
 
+-- 스키마 사용 권한: 프로젝트 기본값에 기대지 않고 명시한다. grant는 이미 있으면 그대로 두므로 다시 실행해도 오류가 없다.
+grant usage on schema public to authenticated, service_role;
+
 -- 테이블 권한: 기본으로 주어질 수 있는 권한을 먼저 모두 거두고 필요한 것만 준다
 revoke all on table public.entitlements from anon, authenticated;
 grant select on table public.entitlements to authenticated;
