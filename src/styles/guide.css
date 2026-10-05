@@ -1,0 +1,172 @@
+/* 유형별 풀이 가이드 (/guide/). 가이드 페이지에서만 불러온다. 색은 모두 기존 토큰 */
+.guide .crumbs {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: var(--s3);
+}
+.guide .crumbs a {
+  color: var(--ink-2);
+}
+.guide-meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+.guide .table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0 0 var(--s4);
+}
+.guide .table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  word-break: keep-all;
+}
+.guide .table-wrap th,
+.guide .table-wrap td {
+  border-bottom: 1px solid var(--rule);
+  padding: var(--s2);
+  text-align: left;
+  vertical-align: top;
+  color: var(--ink-2);
+}
+.guide .table-wrap th {
+  color: var(--ink);
+  border-bottom-color: var(--rule-strong);
+}
+
+/* 예제 */
+.guide-example {
+  margin: var(--s4) 0 var(--s5);
+  padding: var(--s4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+.guide-example .ex-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: var(--s2);
+}
+.guide-example .ex-q {
+  color: var(--ink);
+  font-weight: 600;
+}
+.guide-example .figure {
+  margin: var(--s3) 0;
+}
+.guide-example .ex-choices {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s4);
+  margin: var(--s3) 0;
+}
+.guide-example .ex-choices li {
+  margin: 0;
+}
+.guide-example .ex-chart-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--s2);
+}
+.guide-example .ex-chart-choices li {
+  display: grid;
+  gap: var(--s1);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--s1);
+  background: var(--bg);
+}
+.guide-example .ex-mark {
+  color: var(--muted);
+}
+.guide-example .ex-sub {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: var(--s3) 0 var(--s1);
+}
+.guide-example .ex-steps {
+  padding-left: 1.3em;
+}
+.guide-example .ex-answer {
+  margin: var(--s2) 0 0;
+  padding-top: var(--s2);
+  border-top: 1px solid var(--rule);
+  color: var(--ink);
+}
+
+/* 직접 풀어 보기, 관련 글 */
+.guide .practice {
+  margin-top: var(--s6);
+  padding: var(--s4);
+  border-left: 3px solid var(--primary);
+  background: var(--surface);
+}
+.guide .practice h2 {
+  margin-top: 0;
+  border: 0;
+  padding: 0;
+}
+.guide .practice .btn-primary {
+  text-decoration: none;
+}
+.guide .related ul {
+  padding-left: 1.2em;
+}
+.source-note {
+  margin-top: var(--s5);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* 목록 */
+.guide-list {
+  list-style: none;
+  padding: 0;
+}
+.guide-list li {
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.guide-list a {
+  font-weight: 600;
+}
+.guide-list p {
+  margin: var(--s1) 0 0;
+  font-size: 14px;
+}
+
+/* 초안 표시 (개발 서버에서만) */
+.draft-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  padding: var(--s2) var(--s3);
+}
+.draft-tag {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* 운영자 경험 문단(1인칭) */
+.guide blockquote {
+  margin: var(--s4) 0;
+  padding: var(--s3) var(--s4);
+  border-left: 3px solid var(--rule-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.guide blockquote p {
+  margin: 0 0 var(--s2);
+}
+.guide blockquote p:last-child {
+  margin-bottom: 0;
+}
