@@ -14,7 +14,15 @@ import { PASS_PRICE_KRW } from '../../shared/product';
 import { confirmDialog, esc } from './dom';
 
 export type Provider = 'google' | 'kakao';
+/** 로그인 방식 표시(이미 로그인한 계정의 app_metadata.provider). 카카오 스위치와 관계없이 둔다. */
 const PROVIDER_LABEL: Record<string, string> = { google: '구글', kakao: '카카오' };
+/**
+ * 카카오 로그인 스위치(빌드 시점). "true"일 때만 카카오 버튼·문구를 넣고 로그인 시작을 허용한다.
+ * 카카오는 KOE205(account_email 동의항목 설정 불가)로 보류 중이라 기본은 꺼짐.
+ * 조건을 각 자리에 직접 써야 꺼진 빌드에서 번들러가 카카오 문구를 지운다.
+ */
+const KAKAO_LOGIN = import.meta.env.VITE_KAKAO_LOGIN_ENABLED === 'true';
+const PROVIDERS_TEXT = import.meta.env.VITE_KAKAO_LOGIN_ENABLED === 'true' ? '구글 또는 카카오' : '구글';
 const FREE_KEY = 'ncs-free-diagnosis-used';
 const PRICE = `${PASS_PRICE_KRW.toLocaleString('ko-KR')}원`;
 
@@ -226,8 +234,21 @@ function choiceDialog<T extends string>(title: string, message: string, buttons:
 
 export const notice = (title: string, message = '') => choiceDialog(title, message, []);
 
+/** 로그인 시작. 쓸 수 없는 방식(카카오 스위치 꺼짐 등)은 거부하고 false를 돌려준다. */
+export async function startSignIn(provider: Provider, returnPath: string): Promise<boolean> {
+  if (provider !== 'google' && !(provider === 'kakao' && KAKAO_LOGIN)) return false;
+  await readyPromise;
+  if (!client) return false;
+  const { error } = await client.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo: new URL(returnPath, window.location.origin).toString() },
+  });
+  if (error) await notice('로그인 화면을 열지 못했습니다', '잠시 뒤 다시 시도해 주세요.');
+  return !error;
+}
+
 /**
- * 구글·카카오 중 고르게 한 뒤 로그인 화면으로 보낸다.
+ * 로그인 방식을 고르게 한 뒤 로그인 화면으로 보낸다.
  * returnPath: 로그인 뒤 돌아올 경로(같은 사이트 안). Supabase 대시보드의 Redirect URLs에 등록돼 있어야 한다.
  */
 export async function chooseAndSignIn(returnPath: string, reason = '') {
@@ -236,14 +257,10 @@ export async function chooseAndSignIn(returnPath: string, reason = '') {
   const msg = [reason, leaveWarning].filter(Boolean).join(' ');
   const provider = await choiceDialog<Provider>('로그인', msg, [
     { label: '구글로 로그인', value: 'google', primary: true },
-    { label: '카카오로 로그인', value: 'kakao', primary: true },
+    ...(import.meta.env.VITE_KAKAO_LOGIN_ENABLED === 'true' ? [{ label: '카카오로 로그인', value: 'kakao' as const, primary: true }] : []),
   ]);
   if (!provider) return;
-  const { error } = await client.auth.signInWithOAuth({
-    provider,
-    options: { redirectTo: new URL(returnPath, window.location.origin).toString() },
-  });
-  if (error) await notice('로그인 화면을 열지 못했습니다', '잠시 뒤 다시 시도해 주세요.');
+  await startSignIn(provider, returnPath);
 }
 
 /* ---------- 이용권 ---------- */
@@ -274,7 +291,7 @@ export function passCardHtml(headingTag: 'h2' | 'h3' = 'h3', title = '이용권�
 export async function purchase() {
   await ready();
   if (state.status === 'unconfigured') return notice('이용권 구매', '이용권 기능을 준비하고 있습니다.');
-  if (state.status !== 'member') return chooseAndSignIn('/diagnosis/?auth=purchase', '이용권 구매에는 구글 또는 카카오 로그인이 필요합니다.');
+  if (state.status !== 'member') return chooseAndSignIn('/diagnosis/?auth=purchase', `이용권 구매에는 ${PROVIDERS_TEXT} 로그인이 필요합니다.`);
   if (state.entitlement === 'active') return notice('이미 이용권이 있습니다', '새 문제로 진단, 전 문항 해설, 영역별 상세를 이용할 수 있습니다.');
   return notice('결제는 준비 중입니다', `${PROVIDER_LABEL[state.provider ?? ''] ?? ''} 계정으로 로그인되어 있습니다. ${PRICE} 이용권 결제가 열리면 이 계정으로 구매할 수 있습니다.`.trim());
 }
@@ -301,7 +318,7 @@ export function renderPaywall(app: HTMLElement, mode: 'free-used' | 'purchase', 
     if (s.loginError) status = s.loginError;
     else if (s.status === 'loading' || (s.status === 'member' && s.entitlement === 'unknown')) status = '로그인 상태를 확인하고 있습니다…';
     else if (s.status === 'unconfigured') status = '이용권 기능을 준비하고 있습니다.';
-    else if (s.status === 'guest') status = '이용권을 구매하려면 구글 또는 카카오로 로그인하세요.';
+    else if (s.status === 'guest') status = `이용권을 구매하려면 ${PROVIDERS_TEXT}로 로그인하세요.`;
     else if (s.entitlement === 'active') {
       status = '이용권이 확인되었습니다.';
       primary = '<button type="button" class="btn-primary" data-act="start">새 문제로 진단</button>';

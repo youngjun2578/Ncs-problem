@@ -9,8 +9,13 @@
  *  - 무료 응답 본문에 3~12번 해설 문장, 영역별 상세 문구가 없는지 검색
  *  - 요청 본문에 이용권 값을 넣어도 무시
  *  - 계정 삭제
+ *  - 카카오 로그인 스위치: 켜진 빌드(이용권 켜짐, 카카오 꺼짐)의 dist에 카카오 버튼·안내 문구가 없는지
  */
 import { isDeepStrictEqual } from 'node:util';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { build } from 'vite';
 import { handleAccountDelete, handleReport, handleSession } from '../server/handlers.js';
 import { generationSeed, verifyToken } from '../server/token.js';
 import { composeReportResponse, generateQuestions, score } from '../server/diagnosis.js';
@@ -198,6 +203,43 @@ try {
     ok(rr.status === 401, `삭제 후 같은 토큰으로 채점 → 401 (${rr.status})`);
     const g = await handleAccountDelete(new Request('http://x/api/account-delete', { method: 'GET' }));
     ok(g.status === 405, '삭제: GET → 405');
+  }
+
+  // ---- 카카오 로그인 스위치: 이용권 기능을 켠 빌드를 카카오 꺼짐/켜짐으로 만들어 dist를 검사한다
+  {
+    const walk = (dir: string): string[] => readdirSync(dir).flatMap((f) => (statSync(join(dir, f)).isDirectory() ? walk(join(dir, f)) : [join(dir, f)]));
+    const buildWith = async (kakao: boolean) => {
+      const out = mkdtempSync(join(tmpdir(), 'ncs-kakao-'));
+      const keys = ['VITE_MONETIZATION_ENABLED', 'VITE_KAKAO_LOGIN_ENABLED', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'] as const;
+      const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+      process.env.VITE_MONETIZATION_ENABLED = 'true';
+      // 공개 설정 값이 없으면 번들러가 로그인 코드를 통째로 지우므로, 실제 배포처럼 값(가짜)을 넣고 빌드한다
+      process.env.VITE_SUPABASE_URL = 'https://example-project.supabase.co';
+      process.env.VITE_SUPABASE_ANON_KEY = 'sb_publishable_test_only';
+      if (kakao) process.env.VITE_KAKAO_LOGIN_ENABLED = 'true';
+      else delete process.env.VITE_KAKAO_LOGIN_ENABLED;
+      try {
+        await build({ logLevel: 'silent', build: { outDir: out, emptyOutDir: true } });
+        return { out, texts: walk(out).filter((f) => /\.(html|js|css)$/.test(f)).map((f) => ({ f: f.slice(out.length), t: readFileSync(f, 'utf8') })) };
+      } finally {
+        for (const k of keys)
+          if (saved[k] === undefined) delete process.env[k];
+          else process.env[k] = saved[k];
+      }
+    };
+    // 이미 로그인한 계정의 방식 표시(kakao: '카카오')만 허용한다
+    const LABEL = /kakao\s*:\s*["'`]카카오["'`]/g;
+    const MARKERS = ['카카오로', '구글 또는 카카오', '구글·카카오', 'data-provider="kakao"'];
+    const off = await buildWith(false);
+    const leftovers = off.texts.flatMap(({ f, t }) => (t.replace(LABEL, '').includes('카카오') ? [f] : []));
+    ok(leftovers.length === 0, `카카오 꺼짐 빌드: 방식 표시 외 카카오 문구 없음 (${leftovers.join(', ')})`);
+    ok(off.texts.every(({ t }) => MARKERS.every((m) => !t.includes(m))), '카카오 꺼짐 빌드: 카카오 버튼·안내 문구 없음');
+    ok(off.texts.some(({ f, t }) => f.endsWith('method/index.html') && t.includes('구글 계정으로 로그인해야')), '카카오 꺼짐 빌드: 안내 페이지는 "구글"만');
+    const on = await buildWith(true);
+    const all = on.texts.map(({ t }) => t).join('\n');
+    ok(['카카오로', '구글 또는 카카오', '구글·카카오'].every((m) => all.includes(m)), '(대조) 카카오 켜짐 빌드에는 카카오 버튼·안내 문구가 있음');
+    ok(off.texts.some(({ t }) => t.includes('구글로')), '(대조) 카카오 꺼짐 빌드에도 구글 로그인 버튼은 있음');
+    for (const b of [off, on]) rmSync(b.out, { recursive: true, force: true });
   }
 } finally {
   await mock.close();

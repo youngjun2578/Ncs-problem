@@ -7,20 +7,26 @@ const root = __dirname;
 const partial = (name: string) => readFileSync(resolve(root, 'src/partials', `${name}.html`), 'utf8');
 
 /**
- * 빌드 시점 분기: <!--#if monetization-->켜짐<!--#else-->꺼짐<!--#endif--> (else는 생략 가능)
- * VITE_MONETIZATION_ENABLED가 "true"가 아니면 꺼짐 쪽만 남으므로, 꺼진 빌드의 HTML은 이전과 같다.
+ * 빌드 시점 분기: <!--#if 이름-->켜짐<!--#else-->꺼짐<!--#endif--> (else는 생략 가능)
+ *  - monetization: VITE_MONETIZATION_ENABLED가 "true"가 아니면 꺼짐 쪽만 남으므로, 꺼진 빌드의 HTML은 이전과 같다.
+ *  - kakao: VITE_KAKAO_LOGIN_ENABLED가 "true"일 때만 켜짐 쪽(카카오 문구). monetization 켜짐 구역 안에서만 쓴다.
+ * kakao 블록을 먼저 처리하므로 monetization 블록 안에 kakao 블록을 넣을 수 있다(kakao 블록끼리는 겹치지 않게).
  */
-const IF_BLOCK = /<!--#if monetization-->([\s\S]*?)(?:<!--#else-->([\s\S]*?))?<!--#endif-->/g;
-export const applyBuildFlags = (html: string, monetization: boolean) => html.replace(IF_BLOCK, (_, on: string, off = '') => (monetization ? on : off));
+export interface BuildFlags {
+  monetization: boolean;
+  kakao: boolean;
+}
+const ifBlock = (name: keyof BuildFlags) => new RegExp(`<!--#if ${name}-->([\\s\\S]*?)(?:<!--#else-->([\\s\\S]*?))?<!--#endif-->`, 'g');
+export const applyBuildFlags = (html: string, flags: BuildFlags) =>
+  (['kakao', 'monetization'] as const).reduce((h, name) => h.replace(ifBlock(name), (_, on: string, off = '') => (flags[name] ? on : off)), html);
 
 /** 정적 HTML에 공통 머리말·꼬리말을 끼워 넣는다: <!--#masthead-->, <!--#footer--> */
-function partials(monetization: boolean): Plugin {
+function partials(flags: BuildFlags): Plugin {
   return {
     name: 'html-partials',
     transformIndexHtml: {
       order: 'pre',
-      handler: (html) =>
-        applyBuildFlags(html.replace('<!--#masthead-->', partial('masthead')).replace('<!--#footer-->', partial('footer')), monetization),
+      handler: (html) => applyBuildFlags(html.replace('<!--#masthead-->', partial('masthead')).replace('<!--#footer-->', partial('footer')), flags),
     },
   };
 }
@@ -126,7 +132,7 @@ export default defineConfig(({ mode }) => {
   for (const k of ['REPORT_TOKEN_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'MONETIZATION_ENABLED', 'VITE_SUPABASE_URL'])
     if (!process.env[k] && serverEnv[k]) process.env[k] = serverEnv[k];
   return {
-    plugins: [partials(env.VITE_MONETIZATION_ENABLED === 'true'), seoFiles(env.VITE_SITE_URL ?? 'https://example.com'), apiRoutes()],
+    plugins: [partials({ monetization: env.VITE_MONETIZATION_ENABLED === 'true', kakao: env.VITE_KAKAO_LOGIN_ENABLED === 'true' }),seoFiles(env.VITE_SITE_URL ?? 'https://example.com'), apiRoutes()],
     build: {
       rollupOptions: {
         input: {

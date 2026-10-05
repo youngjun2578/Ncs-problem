@@ -46,7 +46,7 @@ npx tsx scripts/sample.ts chartRead 2   # 템플릿 id 접두어별 예시 문�
 | 진단 | 1회 (브라우저 저장소 표시로 제한) | 반복 |
 | 결과 | 영역별 요약 + 1·2번 해설 | 전체(영역별 상세, 12문항 해설) |
 
-- 로그인: 구글·카카오(Supabase OAuth, PKCE). "이용권 구매"를 누를 때만 요구합니다. 결제는 아직 없고 로그인 뒤 "결제 준비 중"을 보여 줍니다.
+- 로그인: 구글(Supabase OAuth, PKCE). "이용권 구매"를 누를 때만 요구합니다. 카카오는 KOE205(account_email 동의항목 설정 불가)로 보류 중이며, `VITE_KAKAO_LOGIN_ENABLED=true`로 빌드할 때만 버튼과 안내 문구가 들어가고 로그인 시작이 허용됩니다(기본 꺼짐). 이미 로그인한 계정의 방식 표시("카카오")는 그대로 둡니다. 결제는 아직 없고 로그인 뒤 "결제 준비 중"을 보여 줍니다.
 - 서버: `Authorization: Bearer <Supabase 액세스 토큰>`을 Supabase 인증 서버로 검증하고 `entitlements`를 서비스 키로 조회합니다. 토큰 문제 401, 일시 장애 503. 무료 응답은 `server/diagnosis.ts`의 `composeReportResponse`에서 잘라 잠긴 내용이 응답 본문에 들어가지 않습니다. 응답의 `gated`는 스위치가 켜졌을 때만 들어갑니다.
 - DB: `supabase/migrations/`의 SQL을 Supabase SQL Editor에서 실행합니다. 개발용 이용권 수동 부여는 `supabase/dev/grant-entitlement.example.sql`(운영 금지).
 - 안내 문구: HTML의 `<!--#if monetization-->켜짐<!--#else-->꺼짐<!--#endif-->` 블록을 빌드 때 고릅니다.
