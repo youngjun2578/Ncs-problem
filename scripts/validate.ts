@@ -10,17 +10,17 @@
  * 세트 단위: SETS개 세트를 만들어
  *   - 영역별 문항 수, 영역 내 유형 중복 없음, 같은 세트 내 문장 중복 없음
  */
-import { TEMPLATES } from '../src/registry';
-import { AREAS } from '../src/areas';
-import { Rng } from '../src/engine/rng';
-import { buildChoices, hasBadToken, isValidValue } from '../src/engine/choices';
-import { generateSet } from '../src/engine/set';
-import { hasAtMostDecimals, num } from '../src/engine/format';
-import { isFrac, fracLabel } from '../src/engine/frac';
-import { MISTAKES } from '../src/engine/mistakes';
-import { renderChart, renderTable } from '../src/charts/render';
-import type { Figure } from '../src/charts/types';
-import { analyze, judge } from '../src/report/analyze';
+import { TEMPLATES } from '../server/registry.js';
+import { AREAS } from '../server/areas.js';
+import { Rng } from '../server/engine/rng.js';
+import { buildChoices, hasBadToken, isValidValue } from '../server/engine/choices.js';
+import { generateSet } from '../server/engine/set.js';
+import { hasAtMostDecimals, num } from '../server/engine/format.js';
+import { isFrac, fracLabel } from '../server/engine/frac.js';
+import { MISTAKES } from '../server/engine/mistakes.js';
+import { renderChart, renderTable } from '../shared/charts/render.js';
+import type { Figure } from '../shared/charts/types.js';
+import { analyze, judge } from '../server/report/analyze.js';
 
 const PER_TEMPLATE = Number(process.env.PER_TEMPLATE ?? 3000);
 const SETS = Number(process.env.SETS ?? 5000);
