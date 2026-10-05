@@ -23,10 +23,23 @@
   gap: var(--s2);
   margin-top: var(--s5);
 }
-.hero-meta {
-  margin-top: var(--s4);
+.hero-facts {
+  margin: var(--s5) 0 0;
   font-size: 14px;
+  color: var(--ink-2);
+}
+.hero-facts > div {
+  display: grid;
+  grid-template-columns: 4em 1fr;
+  gap: var(--s3);
+  padding: 2px 0;
+}
+.hero-facts dt {
   color: var(--muted);
+}
+.hero-facts dd {
+  margin: 0;
+  min-width: 0;
 }
 .area-list {
   list-style: none;

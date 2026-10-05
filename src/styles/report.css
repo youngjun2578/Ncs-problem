@@ -48,10 +48,6 @@
   color: var(--muted);
   border-bottom: 1px solid var(--rule-strong);
 }
-.summary tbody th a {
-  color: var(--ink);
-  font-weight: 600;
-}
 .summary td.num {
   white-space: nowrap;
 }
@@ -105,69 +101,54 @@
   height: 9px;
 }
 
-.plan {
-  margin: var(--s3) 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: plan;
-}
-.plan li {
-  counter-increment: plan;
-  display: grid;
-  grid-template-columns: 2em auto 1fr;
-  grid-template-areas: 'no area level' 'no what what';
+/* 요약 표의 영역 이름: 누르면 그 행 아래에 상세가 펼쳐진다 */
+.area-toggle {
+  display: inline-flex;
   align-items: center;
-  gap: var(--s1) var(--s3);
-  padding: var(--s3) 0;
-  border-bottom: 1px solid var(--rule);
+  gap: var(--s2);
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
 }
-.plan li::before {
-  content: counter(plan);
-  grid-area: no;
-  align-self: start;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-  font-size: 18px;
+.area-toggle:hover {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
-.plan-area {
-  grid-area: area;
-  font-weight: 700;
+.area-toggle::after {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  margin-bottom: 3px;
 }
-.plan .level {
-  grid-area: level;
+.area-toggle[aria-expanded='true']::after {
+  transform: rotate(-135deg);
+  margin: 3px 0 0;
 }
-.plan-what {
-  grid-area: what;
-  color: var(--ink-2);
-  font-size: 15px;
+.area-row:has(.area-toggle[aria-expanded='true']) > * {
+  border-bottom-color: transparent;
 }
-
+.summary .area-detail > td {
+  padding: 0 var(--s2) var(--s4);
+}
 .area {
-  margin-top: var(--s7);
-}
-.area-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s3);
-  padding-bottom: var(--s2);
-  border-bottom: 2px solid var(--ink);
-}
-.area-head h2 {
-  font-size: 21px;
-  display: flex;
-  gap: var(--s3);
-  align-items: baseline;
-}
-.area-no {
-  font-size: 15px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  border-left: 2px solid var(--rule-strong);
+  padding-left: var(--s4);
 }
 .area-desc {
   color: var(--ink-2);
-  margin: var(--s3) 0 var(--s4);
+  margin: 0 0 var(--s4);
   font-size: 15px;
 }
 .kv {
@@ -220,22 +201,6 @@
   font-size: 15px;
   color: var(--ink-2);
 }
-.study {
-  margin: 0;
-  padding-left: 1.4em;
-}
-.study li {
-  padding: 2px 0;
-}
-.study li > span:first-child {
-  font-weight: 500;
-}
-.study-reason {
-  margin-left: var(--s2);
-  font-size: 13px;
-  color: var(--muted);
-}
-
 /* 문항별 해설 */
 .item {
   border-bottom: 1px solid var(--rule);

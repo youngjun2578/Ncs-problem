@@ -18,46 +18,30 @@ function meter(rate: number) {
 function summaryTable(r: Report) {
   const rows = r.areas
     .map(
-      (a) => `<tr>
-        <th scope="row"><a href="#area-${a.meta.id}">${a.meta.name}</a></th>
+      (a) => `<tr class="area-row">
+        <th scope="row"><button type="button" class="area-toggle" aria-expanded="false" aria-controls="area-${a.meta.id}">${a.meta.name}<span class="sr-only"> 상세 보기</span></button></th>
         <td class="num">${a.correct}/${a.total} <span class="sub">(${pct(a.rate)})</span>${meter(a.rate)}</td>
         <td class="num">${fmtDuration(a.avgSec)}</td>
         <td>${levelBadge(a)}</td>
-      </tr>`,
+      </tr>
+      <tr class="area-detail" id="area-${a.meta.id}" hidden><td colspan="4">${areaDetail(a)}</td></tr>`,
     )
     .join('');
   return `<table class="summary">
-    <caption class="sr-only">영역별 정답률, 평균 풀이 시간, 수준</caption>
+    <caption class="sr-only">영역별 정답률, 평균 풀이 시간, 수준. 영역 이름을 누르면 상세가 펼쳐집니다.</caption>
     <thead><tr><th scope="col">영역</th><th scope="col">정답</th><th scope="col">문항당 평균</th><th scope="col">수준</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
 }
 
-function plan(r: Report) {
-  return `<ol class="plan">${r.priority
-    .map((a) => {
-      const first = a.study.slice(0, 2).map((s) => `‘${s.subtype}’`).join(', ');
-      const what =
-        a.level === 'stable' ? `현재 수준 유지. 시간이 날 때 ${first} 복습` : `${first}부터 다시 풀어 보기`;
-      return `<li><span class="plan-area">${a.meta.name}</span> ${levelBadge(a)}<span class="plan-what">${what}</span></li>`;
-    })
-    .join('')}</ol>`;
-}
-
-function areaSection(a: AreaReport, idx: number) {
+/** 요약 표에서 영역 이름을 누르면 그 행 아래에 펼쳐지는 상세 */
+function areaDetail(a: AreaReport) {
   const patterns = a.patterns.length
     ? `<ul class="patterns">${a.patterns
         .map((p) => `<li><span class="pattern-tag">${p.tag}${p.count > 1 ? ` · ${p.count}회` : ''}</span><span class="pattern-text">${p.text}</span></li>`)
         .join('')}</ul>`
     : `<p class="muted">이번 진단에서는 이 영역의 오답이 없어 실수 패턴을 판단할 근거가 없어요.</p>`;
-  const study = `<ol class="study">${a.study
-    .map((s) => `<li><span>${s.subtype}</span><span class="study-reason">${s.reason}</span></li>`)
-    .join('')}</ol>`;
   return `
-  <section class="area" id="area-${a.meta.id}" aria-labelledby="area-h-${a.meta.id}">
-    <header class="area-head">
-      <h2 id="area-h-${a.meta.id}"><span class="area-no">${two(idx + 1)}</span>${a.meta.name}</h2>
-      ${levelBadge(a)}
-    </header>
+  <div class="area">
     <p class="area-desc">${a.meta.description}</p>
     <dl class="kv">
       <div><dt>정답률</dt><dd class="num">${a.correct}/${a.total} (${pct(a.rate)})</dd></div>
@@ -67,9 +51,7 @@ function areaSection(a: AreaReport, idx: number) {
     <p class="level-reason">${a.levelReason}</p>
     <h3>틀린 패턴</h3>
     ${patterns}
-    <h3>추천 학습 순서</h3>
-    ${study}
-  </section>`;
+  </div>`;
 }
 
 function choiceView(q: Problem, k: number) {
@@ -122,10 +104,9 @@ export function renderResult(app: HTMLElement, qs: Problem[], attempts: Attempt[
 
     <section aria-labelledby="h-summary">
       <h2 id="h-summary" class="section-title">영역별 요약</h2>
+      <p class="muted no-print">영역 이름을 누르면 설명, 취약 유형, 틀린 패턴이 펼쳐집니다. 인쇄할 때는 모두 펼쳐서 출력돼요.</p>
       ${summaryTable(r)}
     </section>
-
-    ${r.areas.map(areaSection).join('')}
 
     <section aria-labelledby="h-items" class="items">
       <h2 id="h-items" class="section-title">문항별 해설</h2>
@@ -133,20 +114,21 @@ export function renderResult(app: HTMLElement, qs: Problem[], attempts: Attempt[
       ${qs.map((q, i) => itemDetail(q, attempts[i], i)).join('')}
     </section>
 
-    <section aria-labelledby="h-plan">
-      <h2 id="h-plan" class="section-title">추천 학습 순서</h2>
-      <p class="muted">수준이 낮은 영역부터, 같은 수준이면 정답률과 풀이 시간을 기준으로 정렬했어요.</p>
-      ${plan(r)}
-    </section>
-
     <div class="actions no-print">
-      <button type="button" class="btn-primary" id="retry">새 문제로 다시 진단</button>
+      <button type="button" class="btn-primary" id="retry">새 문제로 진단</button>
       <button type="button" class="btn-secondary" id="print">인쇄 / PDF로 저장</button>
     </div>
     <p class="fine">문제는 모두 직접 만든 템플릿에서 생성한 연습용 문제이며, 실제 채용 시험의 출제 범위·난이도와 다를 수 있습니다.</p>
 
     <aside class="ad-slot no-print" aria-label="광고" data-ad-slot="result-bottom">${import.meta.env.DEV ? '<span>광고 영역 (개발 모드 표시)</span>' : ''}</aside>
   </main>`;
+  app.querySelectorAll<HTMLButtonElement>('.area-toggle').forEach((b) =>
+    b.addEventListener('click', () => {
+      const open = b.getAttribute('aria-expanded') !== 'true';
+      b.setAttribute('aria-expanded', String(open));
+      document.getElementById(b.getAttribute('aria-controls')!)!.hidden = !open;
+    }),
+  );
   document.getElementById('retry')!.addEventListener('click', retry);
   document.getElementById('print')!.addEventListener('click', () => window.print());
   window.scrollTo(0, 0);
