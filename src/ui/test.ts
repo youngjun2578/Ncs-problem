@@ -8,9 +8,15 @@ export type { Attempt };
 
 const ADVANCE_MS = 380;
 
-/** 풀이 화면. 보기를 고르면 자동으로 다음 문항, 정답은 끝날 때까지 보여주지 않는다. */
+/**
+ * 풀이 화면. 보기를 고르면 자동으로 다음 문항으로 넘어가고, 이전/다음 버튼으로 오갈 수 있다.
+ * 정답 여부는 끝날 때까지 보여주지 않는다.
+ * 풀이 시간은 문항별로 누적한다: 돌아가서 다시 본 시간도 그 문항에 더한다.
+ */
 export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Attempt[], totalSec: number) => void) {
-  const attempts: Attempt[] = [];
+  const n = qs.length;
+  const picked: (number | undefined)[] = Array(n).fill(undefined);
+  const secs: number[] = Array(n).fill(0);
   const t0 = Date.now();
   let qStart = Date.now();
   let i = 0;
@@ -22,10 +28,20 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
     if (el) el.textContent = fmtClock(Math.floor((Date.now() - t0) / 1000));
   }
 
+  /** 지금 문항에 머문 시간을 누적하고 시계를 다시 맞춘다 */
+  function settleTime() {
+    const now = Date.now();
+    secs[i] += (now - qStart) / 1000;
+    qStart = now;
+  }
+
+  const answered = (k: number) => picked[k] !== undefined;
+  const allAnswered = () => picked.every((p) => p !== undefined);
+
   function render() {
-    const q = qs[i], n = qs.length;
+    const q = qs[i];
     const segs = qs
-      .map((p, k) => `<span class="seg ${k < i ? 'done' : k === i ? 'now' : ''} ${k > 0 && qs[k - 1].area !== p.area ? 'area-start' : ''}"></span>`)
+      .map((p, k) => `<span class="seg ${k === i ? 'now' : answered(k) ? 'done' : ''} ${k > 0 && qs[k - 1].area !== p.area ? 'area-start' : ''}"></span>`)
       .join('');
     const isChart = q.choices.some((c) => c.chart);
     const choices = q.choices
@@ -33,9 +49,12 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
         const body = c.chart
           ? `<span class="choice-chart">${renderChart(c.chart, { w: 320, h: 170 })}</span>`
           : `<span class="choice-text">${c.label}</span>`;
-        return `<li><button type="button" class="choice" data-k="${k}"><span class="mark" aria-hidden="true">${CIRC[k]}</span><span class="sr-only">${k + 1}번</span>${body}</button></li>`;
+        const sel = picked[i] === k;
+        return `<li><button type="button" class="choice${sel ? ' selected' : ''}" data-k="${k}" aria-pressed="${sel}"><span class="mark" aria-hidden="true">${CIRC[k]}</span><span class="sr-only">${k + 1}번</span>${body}</button></li>`;
       })
       .join('');
+    const last = i === n - 1;
+    const doneCount = picked.filter((p) => p !== undefined).length;
     app.innerHTML = `
     <header class="progress" aria-label="진행 상황">
       <div class="progress-in">
@@ -44,7 +63,7 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
           <span class="area-now">${AREA_BY_ID[q.area].name}</span>
           <span class="clock" aria-label="경과 시간"><span id="clock">00:00</span></span>
         </div>
-        <div class="segs" role="progressbar" aria-label="풀이 진행" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${i}" aria-valuetext="${n}문항 중 ${i}문항 완료">${segs}</div>
+        <div class="segs" role="progressbar" aria-label="풀이 진행" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${doneCount}" aria-valuetext="${n}문항 중 ${doneCount}문항 답함">${segs}</div>
       </div>
     </header>
     <main class="page test" id="main">
@@ -54,38 +73,84 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
         ${q.figure ? renderFigure(q.figure) : ''}
       </section>
       <ol class="choices ${isChart ? 'chart-choices' : ''}" aria-label="보기">${choices}</ol>
-      <p class="hint">보기를 누르면 다음 문항으로 넘어갑니다. 키보드 1–5로도 고를 수 있어요.</p>
+      <nav class="q-nav" aria-label="문항 이동">
+        <button type="button" class="btn-secondary" id="prev" ${i === 0 ? 'disabled' : ''}>← 이전</button>
+        <button type="button" class="btn-secondary" id="next" ${answered(i) && (!last || allAnswered()) ? '' : 'disabled'}>${last ? '결과 보기' : '다음 →'}</button>
+      </nav>
+      <p class="hint">보기를 누르면 다음 문항으로 넘어갑니다. 이전 문항으로 돌아가 답을 바꿀 수 있고, 정답은 모든 문항을 푼 뒤에 공개됩니다. 키보드: 1–5 선택, ← 이전, → 다음</p>
     </main>`;
     tick();
     window.scrollTo(0, 0);
     (document.getElementById('q-text') as HTMLElement).focus({ preventScroll: true });
-    app.querySelectorAll<HTMLButtonElement>('.choice').forEach((b) => b.addEventListener('click', () => pick(Number(b.dataset.k), b)));
-    qStart = Date.now();
+    app.querySelectorAll<HTMLButtonElement>('.choice').forEach((b) => b.addEventListener('click', () => pick(Number(b.dataset.k))));
+    document.getElementById('prev')!.addEventListener('click', prev);
+    document.getElementById('next')!.addEventListener('click', next);
   }
 
-  function pick(k: number, btn?: HTMLElement) {
+  function goTo(k: number) {
+    settleTime();
+    i = k;
+    render();
+  }
+
+  function finish() {
+    settleTime();
+    window.clearInterval(timer);
+    document.removeEventListener('keydown', onKey);
+    const attempts: Attempt[] = picked.map((p, k) => ({ picked: p as number, sec: secs[k] }));
+    // 총 풀이 시간 = 문항별 시간의 합 (리포트의 문항당 평균과 같은 기준)
+    onDone(attempts, Math.round(secs.reduce((a, b) => a + b, 0)));
+  }
+
+  /** 다음 칸: 마지막 문항이면 아직 안 푼 첫 문항, 모두 풀었으면 결과 */
+  function advance() {
+    if (i + 1 < n) goTo(i + 1);
+    else if (allAnswered()) finish();
+    else goTo(picked.findIndex((p) => p === undefined));
+  }
+
+  function pick(k: number) {
     if (locked) return;
     locked = true;
-    (btn ?? app.querySelector(`.choice[data-k="${k}"]`))?.classList.add('selected');
-    attempts[i] = { picked: k, sec: (Date.now() - qStart) / 1000 };
+    picked[i] = k;
+    app.querySelectorAll<HTMLButtonElement>('.choice').forEach((b) => {
+      const sel = Number(b.dataset.k) === k;
+      b.classList.toggle('selected', sel);
+      b.setAttribute('aria-pressed', String(sel));
+    });
     window.setTimeout(
       () => {
         locked = false;
-        if (i + 1 < qs.length) {
-          i++;
-          render();
-        } else {
-          window.clearInterval(timer);
-          document.removeEventListener('keydown', onKey);
-          onDone(attempts, Math.round((Date.now() - t0) / 1000));
-        }
+        advance();
       },
       prefersReducedMotion() ? 120 : ADVANCE_MS,
     );
   }
 
+  function prev() {
+    if (locked || i === 0) return;
+    goTo(i - 1);
+  }
+
+  function next() {
+    if (locked || !answered(i)) return;
+    if (i === n - 1 && !allAnswered()) return;
+    advance();
+  }
+
   function onKey(e: KeyboardEvent) {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (document.querySelector('dialog[open]')) return;
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      prev();
+      return;
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      next();
+      return;
+    }
     const k = Number(e.key) - 1;
     if (k >= 0 && k < 5) pick(k);
   }

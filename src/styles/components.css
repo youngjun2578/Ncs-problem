@@ -342,6 +342,22 @@
 .choice-chart {
   display: block;
 }
+.q-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s2);
+  margin-top: var(--s5);
+}
+.q-nav .btn-secondary {
+  min-width: 112px;
+}
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  color: var(--muted);
+  background: var(--surface);
+  border-color: var(--rule);
+  cursor: not-allowed;
+}
 .hint {
   font-size: 13px;
   color: var(--muted);
