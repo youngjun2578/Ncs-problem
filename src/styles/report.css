@@ -334,3 +334,66 @@
   color: var(--muted);
   font-size: 13px;
 }
+
+/* 이용권 안내 (무료 결과의 잠긴 자리, 이용권 안내 화면) */
+.locked {
+  margin-top: var(--s4);
+  padding: var(--s4);
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: var(--s3);
+  justify-items: start;
+}
+.locked-title {
+  font-weight: 600;
+  color: var(--ink);
+}
+.pass-card {
+  width: 100%;
+  margin: var(--s4) 0;
+  padding: var(--s4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  display: grid;
+  gap: var(--s3);
+  justify-items: start;
+}
+.locked .pass-card {
+  margin: 0;
+}
+.pass-title {
+  font-size: 17px;
+}
+.pass-benefits {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--ink-2);
+  font-size: 15px;
+}
+.pass-benefits li {
+  margin-bottom: 2px;
+}
+.pass-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2);
+}
+.pass-price b {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.pass-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.print-hint {
+  margin-top: var(--s3);
+  font-size: 14px;
+}
+.print-only {
+  display: none;
+}

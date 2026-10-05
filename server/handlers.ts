@@ -6,7 +6,9 @@
  */
 import type { ApiError, ApiErrorCode, ReportRequest, ReportResponse, SessionResponse } from '../shared/api.js';
 import { ConfigError, generationSeed, issueToken, newPublicSeed, nowSec, readSecret, TOKEN_TTL_SEC, verifyToken } from './token.js';
-import { composeReportResponse, generateQuestions, QUESTION_COUNT, score, toPublicQuestion } from './diagnosis.js';
+import { composeReportResponse, generateQuestions, QUESTION_COUNT, score, toPublicQuestion, type ReportScope } from './diagnosis.js';
+import { monetizationEnabled } from './config.js';
+import { accountService } from './accounts.js';
 
 /** 채점 요청 본문 최대 크기 (토큰 + 12문항 답·시간이면 1KB 안팎) */
 const MAX_BODY_BYTES = 8 * 1024;
@@ -26,6 +28,9 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   method_not_allowed: '허용되지 않은 요청 방식입니다.',
   payload_too_large: '요청이 너무 큽니다.',
   server_misconfigured: '서버 설정 오류로 진단을 시작할 수 없습니다.',
+  not_found: '없는 API 경로입니다.',
+  auth_invalid: '로그인이 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.',
+  service_unavailable: '로그인·이용권 확인 서비스에 잠시 연결할 수 없습니다. 잠시 뒤 다시 시도해 주세요.',
   internal: '서버에서 오류가 났습니다. 잠시 뒤 다시 시도해 주세요.',
 };
 
@@ -36,6 +41,9 @@ const STATUS: Record<ApiErrorCode, number> = {
   method_not_allowed: 405,
   payload_too_large: 413,
   server_misconfigured: 500,
+  not_found: 404,
+  auth_invalid: 401,
+  service_unavailable: 503,
   internal: 500,
 };
 
@@ -124,14 +132,66 @@ export async function handleReport(req: Request): Promise<Response> {
     const total = secs.reduce((x, y) => x + y, 0);
     if (total > now - t.body.iat + ELAPSED_SLACK_SEC) return apiError('bad_request', '풀이 시간이 진단 시작 이후 흐른 시간보다 깁니다.');
 
+    // 응답 범위: 스위치가 꺼져 있으면 로그인 정보를 보지 않고 전체(이전과 같음)
+    const scope = await resolveScope(req);
+    if (scope instanceof Response) return scope;
+
     const qs = generateQuestions(generationSeed(secret, t.body.s));
     // 2차: 실제 문항의 보기 수로 범위 검사
     const rangeError = checkReportInput(body.value, qs.map((q) => q.choices.length));
     if (rangeError) return apiError('bad_request', rangeError);
 
-    const res: ReportResponse = composeReportResponse(score(qs, answers, secs));
+    const res: ReportResponse = composeReportResponse(score(qs, answers, secs), scope);
     return json(200, res);
   } catch (e) {
     return fail('report', e);
+  }
+}
+
+/** Authorization: Bearer <토큰> 에서 토큰만 꺼낸다. 헤더가 없으면 null, 모양이 틀리면 false */
+function bearer(req: Request): string | null | false {
+  const h = req.headers.get('authorization');
+  if (h === null || h.trim() === '') return null;
+  const m = /^Bearer\s+([A-Za-z0-9._~+/=-]{1,4096})$/.exec(h.trim());
+  return m ? m[1] : false;
+}
+
+/**
+ * 로그인·이용권 상태로 응답 범위를 정한다. 요청 본문의 값은 보지 않는다.
+ *  - 스위치 꺼짐 → undefined (전체, 이전과 같음)
+ *  - 토큰 없음 → 'free'
+ *  - 토큰 검증 실패 → 401, 인증·DB 일시 장애 → 503 (무료/유료로 조용히 처리하지 않음)
+ */
+async function resolveScope(req: Request): Promise<ReportScope | Response> {
+  if (!monetizationEnabled()) return undefined;
+  const token = bearer(req);
+  if (token === null) return 'free';
+  if (token === false) return apiError('auth_invalid');
+  const svc = accountService();
+  const v = await svc.verify(token);
+  if (!v.ok) return apiError(v.reason === 'invalid' ? 'auth_invalid' : 'service_unavailable');
+  const e = await svc.entitlement(v.userId);
+  if (!e.ok) return apiError('service_unavailable');
+  return e.active ? 'full' : 'free';
+}
+
+/**
+ * POST /api/account-delete: 로그인한 본인의 이용권 행과 계정을 삭제한다.
+ * 기능 스위치가 꺼져 있으면 없는 경로처럼 404만 돌려준다(개발 서버의 없는 /api/* 응답과 같은 형식, 설정 값은 보지 않음).
+ */
+export async function handleAccountDelete(req: Request): Promise<Response> {
+  if (!monetizationEnabled()) return apiError('not_found');
+  if (req.method !== 'POST') return apiError('method_not_allowed');
+  try {
+    const token = bearer(req);
+    if (!token) return apiError('auth_invalid');
+    const svc = accountService();
+    const v = await svc.verify(token);
+    if (!v.ok) return apiError(v.reason === 'invalid' ? 'auth_invalid' : 'service_unavailable');
+    const d = await svc.deleteAccount(v.userId);
+    if (!d.ok) return apiError('service_unavailable', '계정을 삭제하지 못했습니다. 잠시 뒤 다시 시도해 주세요.');
+    return json(200, { deleted: true });
+  } catch (e) {
+    return fail('account-delete', e);
   }
 }

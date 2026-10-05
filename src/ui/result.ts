@@ -91,6 +91,9 @@ export function renderResult(app: HTMLElement, res: ReportResponse, retry: () =>
   const r = res.meta;
   const when = new Date().toLocaleString('ko-KR', { dateStyle: 'long', timeStyle: 'short' });
   const perArea = r.perArea;
+  // 서버가 무료 응답으로 자른 경우(gated=true): 잠긴 자리를 표시한다. 스위치가 꺼져 있으면 필드가 없다.
+  const gated = res.gated === true;
+  const lockedFrom = res.explanations.length + 1;
   app.innerHTML = `
   <main class="page report" id="main">
     <header class="doc-head">
@@ -105,10 +108,12 @@ export function renderResult(app: HTMLElement, res: ReportResponse, retry: () =>
       <p class="notice"><b>참고용 결과입니다.</b> 영역마다 ${perArea}문항으로 판정해 우연의 영향이 큽니다. 실력을 확정하는 점수가 아니라 다음에 무엇을 공부할지 정하는 데 활용하세요.</p>
     </header>
 
+    ${gated ? `<p class="print-only print-note">무료 리포트입니다. 영역별 상세와 ${lockedFrom}~${r.total}번 문항 해설은 포함되지 않습니다.</p>` : ''}
     <section aria-labelledby="h-summary">
       <h2 id="h-summary" class="section-title">영역별 요약</h2>
-      <p class="muted no-print">영역 이름을 누르면 설명, 취약 유형, 틀린 패턴이 펼쳐집니다. 인쇄할 때는 모두 펼쳐서 출력돼요.</p>
+      ${res.areaDetails.length ? '<p class="muted no-print">영역 이름을 누르면 설명, 취약 유형, 틀린 패턴이 펼쳐집니다. 인쇄할 때는 모두 펼쳐서 출력돼요.</p>' : ''}
       ${summaryTable(res.summary, res.areaDetails)}
+      ${gated ? '<div class="locked no-print" data-locked="details"><p class="locked-title">영역별 상세(영역 설명, 취약 유형, 틀린 패턴)는 이용권으로 볼 수 있습니다.</p></div>' : ''}
     </section>
 
     ${
@@ -117,6 +122,7 @@ export function renderResult(app: HTMLElement, res: ReportResponse, retry: () =>
       <h2 id="h-items" class="section-title">문항별 해설</h2>
       <p class="muted no-print">각 문항을 누르면 풀이가 펼쳐집니다. 인쇄할 때는 모두 펼쳐서 출력돼요.</p>
       ${res.explanations.map(itemDetail).join('')}
+      ${gated && lockedFrom <= r.total ? `<div class="locked no-print" data-locked="explanations"><p class="locked-title">${lockedFrom}~${r.total}번 문항 해설은 이용권으로 볼 수 있습니다.</p></div>` : ''}
     </section>`
         : ''
     }
@@ -125,6 +131,7 @@ export function renderResult(app: HTMLElement, res: ReportResponse, retry: () =>
       <button type="button" class="btn-primary" id="retry">새 문제로 진단</button>
       <button type="button" class="btn-secondary" id="print">인쇄 / PDF로 저장</button>
     </div>
+    ${gated ? `<p class="muted no-print print-hint">인쇄 / PDF에는 지금 화면의 무료 리포트(영역별 요약, 1~${lockedFrom - 1}번 해설)만 담기며 영역별 상세는 빠집니다.</p>` : ''}
     <p class="fine">문제는 모두 직접 만든 템플릿에서 생성한 연습용 문제이며, 실제 채용 시험의 출제 범위·난이도와 다를 수 있습니다.</p>
 
     <aside class="ad-slot no-print" aria-label="광고" data-ad-slot="result-bottom">${import.meta.env.DEV ? '<span>광고 영역 (개발 모드 표시)</span>' : ''}</aside>

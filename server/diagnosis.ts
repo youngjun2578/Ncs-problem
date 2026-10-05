@@ -7,6 +7,7 @@ import { generateSet } from './engine/set.js';
 import type { Problem } from './engine/types.js';
 import { analyze, LEVEL_LABEL, type Report } from './report/analyze.js';
 import type { Explanation, PublicChoice, PublicQuestion, ReportResponse } from '../shared/api.js';
+import { FREE_EXPLANATION_COUNT } from '../shared/product.js';
 
 export const PER_AREA = 3;
 const AREA_IDS = AREAS.filter((a) => TEMPLATES.some((t) => t.area === a.id)).map((a) => a.id);
@@ -62,11 +63,31 @@ function explanation(q: Problem, picked: number): Explanation {
 }
 
 /**
- * 응답을 만드는 유일한 지점.
- * 다음 단계(무료/유료 구분)에서는 여기서 areaDetails·explanations 등 구역을 잘라 낸다.
- * 지금은 아무것도 자르지 않고 전부 돌려준다.
+ * 응답에 담을 범위.
+ *  - undefined: 기능 스위치 꺼짐. 이전과 똑같이 전체를 돌려주고 gated 필드도 넣지 않는다.
+ *  - 'full': 이용권 있음. 전체 + gated: false
+ *  - 'free': 게스트·이용권 없음. 요약 + 해설 1·2번만 + gated: true
  */
-export function composeReportResponse(full: FullResult): ReportResponse {
+export type ReportScope = 'full' | 'free' | undefined;
+
+/**
+ * 응답을 만드는 유일한 지점. 무료 응답은 여기서 구역을 잘라 내며,
+ * 잘린 내용(영역별 상세 문구, 3번 이후 해설)은 응답 본문에 아예 들어가지 않는다.
+ */
+export function composeReportResponse(full: FullResult, scope?: ReportScope): ReportResponse {
+  const all = composeAll(full);
+  if (scope === undefined) return all;
+  if (scope === 'full') return { gated: false, ...all };
+  return {
+    gated: true,
+    meta: all.meta,
+    summary: all.summary,
+    areaDetails: [],
+    explanations: all.explanations.slice(0, FREE_EXPLANATION_COUNT),
+  };
+}
+
+function composeAll(full: FullResult): ReportResponse {
   const { qs, answers, report: r } = full;
   return {
     meta: { total: r.total, correct: r.correct, totalSec: r.totalSec, perArea: r.areas[0]?.total ?? 0 },
