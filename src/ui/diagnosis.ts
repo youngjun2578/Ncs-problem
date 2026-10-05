@@ -34,10 +34,21 @@ function renderReady() {
 function start() {
   const qs = generateSet(TEMPLATES, newSeed(), { areas: areas.map((a) => a.id), perArea: PER_AREA });
   setTesting(true);
-  runTest(app, qs, (attempts, totalSec) => {
-    setTesting(false);
-    renderResult(app, qs, attempts, totalSec, start);
-  });
+  runTest(
+    app,
+    qs,
+    (attempts, totalSec) => {
+      setTesting(false);
+      renderResult(app, qs, attempts, totalSec, start);
+    },
+    {
+      home: () => {
+        window.location.href = '/';
+      },
+      // 같은 시드를 쓰지 않고 새 시드로 12문항을 새로 만든다
+      restart: start,
+    },
+  );
 }
 
 renderReady();

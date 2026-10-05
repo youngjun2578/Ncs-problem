@@ -223,6 +223,50 @@
   margin: 0 auto;
   padding: var(--s3) var(--s4);
 }
+.progress-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s2);
+  margin: calc(var(--s2) * -1) 0 var(--s1);
+}
+.btn-text {
+  min-height: 44px;
+  padding: 0 var(--s2);
+  margin: 0 calc(var(--s2) * -1);
+  background: none;
+  border: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.btn-text:hover {
+  color: var(--primary);
+}
+.confirm {
+  max-width: min(400px, calc(100vw - 32px));
+  padding: var(--s5);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  color: var(--ink);
+}
+.confirm::backdrop {
+  background: rgb(10 16 28 / 0.5);
+}
+.confirm-msg {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: var(--s5);
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
 .progress-top {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -452,4 +496,8 @@
 .testing .masthead,
 .testing .site-footer {
   display: none;
+}
+.confirm-actions .btn-primary,
+.confirm-actions .btn-secondary {
+  padding: var(--s3) var(--s4);
 }

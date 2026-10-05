@@ -1,7 +1,7 @@
 import type { Problem } from '../engine/types';
 import { AREA_BY_ID } from '../areas';
 import { renderChart, renderFigure } from '../charts/render';
-import { CIRC, fmtClock, prefersReducedMotion } from './dom';
+import { CIRC, confirmDialog, fmtClock, prefersReducedMotion } from './dom';
 
 import type { Attempt } from '../report/analyze';
 export type { Attempt };
@@ -13,7 +13,14 @@ const ADVANCE_MS = 380;
  * 정답 여부는 끝날 때까지 보여주지 않는다.
  * 풀이 시간은 문항별로 누적한다: 돌아가서 다시 본 시간도 그 문항에 더한다.
  */
-export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Attempt[], totalSec: number) => void) {
+export interface TestExits {
+  /** 홈으로 */
+  home: () => void;
+  /** 새 시드로 처음부터 */
+  restart: () => void;
+}
+
+export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Attempt[], totalSec: number) => void, exits: TestExits) {
   const n = qs.length;
   const picked: (number | undefined)[] = Array(n).fill(undefined);
   const secs: number[] = Array(n).fill(0);
@@ -21,6 +28,8 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
   let qStart = Date.now();
   let i = 0;
   let locked = false;
+  /** 나가거나 끝난 뒤에는 남은 자동 이동 타이머가 화면을 건드리지 않게 한다 */
+  let stopped = false;
 
   const timer = window.setInterval(tick, 1000);
   function tick() {
@@ -58,6 +67,10 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
     app.innerHTML = `
     <header class="progress" aria-label="진행 상황">
       <div class="progress-in">
+        <div class="progress-actions">
+          <button type="button" class="btn-text" id="home">홈</button>
+          <button type="button" class="btn-text" id="restart">처음부터 다시</button>
+        </div>
         <div class="progress-top">
           <span class="count"><b>${i + 1}</b> / ${n}</span>
           <span class="area-now">${AREA_BY_ID[q.area].name}</span>
@@ -85,18 +98,39 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
     app.querySelectorAll<HTMLButtonElement>('.choice').forEach((b) => b.addEventListener('click', () => pick(Number(b.dataset.k))));
     document.getElementById('prev')!.addEventListener('click', prev);
     document.getElementById('next')!.addEventListener('click', next);
+    document.getElementById('home')!.addEventListener('click', () => leave(exits.home, '홈으로 가기'));
+    document.getElementById('restart')!.addEventListener('click', () => leave(exits.restart, '처음부터 다시'));
+  }
+
+  /** 풀이를 버리고 나간다. 확인창을 거친다. */
+  let leaving = false;
+  async function leave(go: () => void, okLabel: string) {
+    if (leaving) return;
+    leaving = true;
+    const ok = await confirmDialog('진행 중인 풀이가 사라집니다. 나갈까요?', okLabel);
+    leaving = false;
+    if (!ok) return;
+    stop();
+    go();
+  }
+
+  function stop() {
+    stopped = true;
+    window.clearInterval(timer);
+    document.removeEventListener('keydown', onKey);
   }
 
   function goTo(k: number) {
+    if (leaving || stopped) return;
     settleTime();
     i = k;
     render();
   }
 
   function finish() {
+    if (leaving || stopped) return;
     settleTime();
-    window.clearInterval(timer);
-    document.removeEventListener('keydown', onKey);
+    stop();
     const attempts: Attempt[] = picked.map((p, k) => ({ picked: p as number, sec: secs[k] }));
     // 총 풀이 시간 = 문항별 시간의 합 (리포트의 문항당 평균과 같은 기준)
     onDone(attempts, Math.round(secs.reduce((a, b) => a + b, 0)));
@@ -110,7 +144,7 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
   }
 
   function pick(k: number) {
-    if (locked) return;
+    if (locked || leaving) return;
     locked = true;
     picked[i] = k;
     app.querySelectorAll<HTMLButtonElement>('.choice').forEach((b) => {
