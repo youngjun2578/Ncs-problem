@@ -88,8 +88,14 @@ export interface Explanation {
   steps: string[];
 }
 
-/** POST /api/report 응답: 머리말 정보 + 세 구역 */
+/**
+ * POST /api/report 응답: 머리말 정보 + 세 구역.
+ * gated: 서버 기능 스위치(MONETIZATION_ENABLED)가 켜져 있을 때만 들어간다.
+ *   true면 무료 응답(영역별 상세 없음, 해설은 1·2번만), false면 이용권 응답(전체).
+ *   스위치가 꺼져 있으면 이 필드가 없고 응답은 전체다.
+ */
 export interface ReportResponse {
+  gated?: boolean;
   meta: {
     total: number;
     correct: number;
@@ -108,6 +114,8 @@ export type ApiErrorCode =
   | 'method_not_allowed'
   | 'payload_too_large'
   | 'server_misconfigured'
+  | 'auth_invalid'
+  | 'service_unavailable'
   | 'internal';
 
 export interface ApiError {
