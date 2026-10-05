@@ -56,11 +56,25 @@
     color: inherit;
     text-decoration: none;
   }
-  .section-title,
-  .area-head {
+  .section-title {
     break-after: avoid;
   }
-  .area-head,
+  /* 영역 상세는 인쇄할 때 모두 펼친다 */
+  .summary .area-detail[hidden] {
+    display: table-row !important;
+  }
+  .area-toggle {
+    min-height: 0;
+  }
+  .area-toggle::after {
+    display: none;
+  }
+  .area-row {
+    break-after: avoid;
+  }
+  .area-row > * {
+    border-bottom-color: transparent;
+  }
   .kv,
   .patterns li,
   .plan li {
@@ -73,7 +87,6 @@
     display: none;
   }
   .figure,
-  .summary,
   .kv {
     break-inside: avoid;
   }
