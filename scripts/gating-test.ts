@@ -33,7 +33,8 @@ const ok = (c: unknown, m: string) => {
   }
 };
 
-const mock = await startMockSupabase(54329);
+// 빈 포트에 띄워 단독 실행 중인 모의 서버(54329)와 겹치지 않게 한다
+const mock = await startMockSupabase(0);
 const setMock = (s: Record<string, unknown>) => fetch(`${mock.url}/__mock/state`, { method: 'POST', body: JSON.stringify(s) });
 
 function onEnv() {

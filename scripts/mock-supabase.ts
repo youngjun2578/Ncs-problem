@@ -181,8 +181,10 @@ export async function startMockSupabase(port = 54329) {
     send(404, { msg: `mock: ${req.method} ${url.pathname}` });
   });
   await new Promise<void>((r) => server.listen(port, '127.0.0.1', r));
+  // port 0이면 빈 포트를 고른다
+  const actual = (server.address() as { port: number }).port;
   return {
-    url: `http://127.0.0.1:${port}`,
+    url: `http://127.0.0.1:${actual}`,
     state,
     close: () => new Promise<void>((r) => server.close(() => r())),
   };
