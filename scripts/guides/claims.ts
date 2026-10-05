@@ -48,4 +48,8 @@ export const CLAIMS: { slug: string; text: string; ok: () => boolean }[] = [
   { slug: 'probability-fraction', text: '4/8 × 4/8 = 1/4', ok: () => reduce(4 * 4, 8 * 8) === '1/4' },
   { slug: 'probability-fraction', text: '전체 8가지에서 빼서 7/8', ok: () => 2 ** 3 === 8 && reduce(8 - 1, 8) === '7/8' },
   { slug: 'probability-fraction', text: '91/216과 125/216을 더해 1', ok: () => 91 + 125 === 216 && 5 ** 3 === 125 && 6 ** 3 === 216 },
+  { slug: 'speed-round-trip-average', text: '40과 60의 가운데 값인 50', ok: () => (40 + 60) / 2 === 50 },
+  { slug: 'speed-round-trip-average', text: '편도 거리를 120km로 정해 보면, 갈 때는 3시간, 올 때는 2시간', ok: () => 120 / 40 === 3 && 120 / 60 === 2 },
+  { slug: 'speed-round-trip-average', text: '왕복 240km를 5시간에 달린 셈이라 평균 속력은 시속 48km', ok: () => 120 * 2 === 240 && 3 + 2 === 5 && 240 / 5 === 48 && (2 * 40 * 60) / (40 + 60) === 48 },
+  { slug: 'speed-round-trip-average', text: '가운데 값 50보다 느린 쪽', ok: () => 48 < 50 && 48 - 40 < 60 - 48 },
 ];
