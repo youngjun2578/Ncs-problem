@@ -16,14 +16,14 @@ export class ApiFailure extends Error {
   }
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
+async function post<T>(path: string, body: unknown, bearer?: string | null): Promise<T> {
   const ctl = new AbortController();
   const timer = window.setTimeout(() => ctl.abort(), TIMEOUT_MS);
   let res: Response;
   try {
     res = await fetch(path, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: bearer ? { 'content-type': 'application/json', authorization: `Bearer ${bearer}` } : { 'content-type': 'application/json' },
       body: JSON.stringify(body),
       signal: ctl.signal,
       cache: 'no-store',
@@ -49,4 +49,5 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 export const startSession = () => post<SessionResponse>('/api/session', {});
 
-export const requestReport = (req: ReportRequest) => post<ReportResponse>('/api/report', req);
+/** bearer: 로그인 토큰(기능 스위치가 켜진 빌드에서 로그인한 경우만). 이용권 판단은 서버가 한다. */
+export const requestReport = (req: ReportRequest, bearer?: string | null) => post<ReportResponse>('/api/report', req, bearer);

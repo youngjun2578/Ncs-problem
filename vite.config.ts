@@ -6,13 +6,21 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 const root = __dirname;
 const partial = (name: string) => readFileSync(resolve(root, 'src/partials', `${name}.html`), 'utf8');
 
+/**
+ * 빌드 시점 분기: <!--#if monetization-->켜짐<!--#else-->꺼짐<!--#endif--> (else는 생략 가능)
+ * VITE_MONETIZATION_ENABLED가 "true"가 아니면 꺼짐 쪽만 남으므로, 꺼진 빌드의 HTML은 이전과 같다.
+ */
+const IF_BLOCK = /<!--#if monetization-->([\s\S]*?)(?:<!--#else-->([\s\S]*?))?<!--#endif-->/g;
+export const applyBuildFlags = (html: string, monetization: boolean) => html.replace(IF_BLOCK, (_, on: string, off = '') => (monetization ? on : off));
+
 /** 정적 HTML에 공통 머리말·꼬리말을 끼워 넣는다: <!--#masthead-->, <!--#footer--> */
-function partials(): Plugin {
+function partials(monetization: boolean): Plugin {
   return {
     name: 'html-partials',
     transformIndexHtml: {
       order: 'pre',
-      handler: (html) => html.replace('<!--#masthead-->', partial('masthead')).replace('<!--#footer-->', partial('footer')),
+      handler: (html) =>
+        applyBuildFlags(html.replace('<!--#masthead-->', partial('masthead')).replace('<!--#footer-->', partial('footer')), monetization),
     },
   };
 }
@@ -118,7 +126,7 @@ export default defineConfig(({ mode }) => {
   for (const k of ['REPORT_TOKEN_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'MONETIZATION_ENABLED', 'VITE_SUPABASE_URL'])
     if (!process.env[k] && serverEnv[k]) process.env[k] = serverEnv[k];
   return {
-    plugins: [partials(), seoFiles(env.VITE_SITE_URL ?? 'https://example.com'), apiRoutes()],
+    plugins: [partials(env.VITE_MONETIZATION_ENABLED === 'true'), seoFiles(env.VITE_SITE_URL ?? 'https://example.com'), apiRoutes()],
     build: {
       rollupOptions: {
         input: {

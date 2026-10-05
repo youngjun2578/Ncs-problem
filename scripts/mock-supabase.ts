@@ -163,6 +163,8 @@ export async function startMockSupabase(port = 54329) {
     if (url.pathname === '/rest/v1/entitlements') {
       if (state.db === '500') return send(500, { message: 'mock db down' });
       const uid = (url.searchParams.get('user_id') ?? '').replace(/^eq\./, '');
+      // PostgREST처럼: 공개 키·서비스 키가 아닌 토큰이 틀리면 401
+      if (!isService && bearer && bearer !== MOCK_ANON_KEY && !verifyJwt(bearer)) return send(401, { code: 'PGRST301', message: 'JWT invalid' });
       // RLS 흉내: 서비스 키가 아니면 토큰 주인의 행만
       const viewer = isService ? null : verifyJwt(bearer)?.sub;
       const visible = isService || viewer === uid;

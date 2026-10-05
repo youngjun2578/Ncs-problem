@@ -15,9 +15,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s4);
+  /* 좁은 화면에서는 단어를 끊지 않고 메뉴를 다음 줄로 내린다 */
+  flex-wrap: wrap;
+  column-gap: var(--s4);
+  row-gap: 0;
 }
 .brand {
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
@@ -47,6 +51,7 @@
   gap: var(--s1);
 }
 .nav a {
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -59,6 +64,52 @@
 .nav a[aria-current='page'] {
   color: var(--primary);
   text-decoration: underline;
+}
+
+/* 머리말 계정 메뉴 (이용권 기능이 켜진 빌드에서만 있음) */
+.account {
+  margin-left: auto;
+}
+.account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  min-height: 36px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.account-btn:hover {
+  border-color: var(--primary);
+}
+.account-btn:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+.account-badge {
+  font-size: 12px;
+  padding: 0 var(--s1);
+  border-radius: 3px;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+@media (max-width: 600px) {
+  /* 계정 버튼은 첫 줄 오른쪽에, 메뉴는 둘째 줄로 */
+  .masthead-in:has(.account) .account {
+    order: 2;
+  }
+  .masthead-in:has(.account) .nav {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: calc(var(--s2) * -1);
+  }
 }
 
 .site-footer {
@@ -232,6 +283,17 @@
 }
 .confirm::backdrop {
   background: rgb(10 16 28 / 0.5);
+}
+.confirm-title {
+  font-size: 18px;
+  margin-bottom: var(--s3);
+}
+.confirm-stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+.confirm-stack .btn-text {
+  margin: var(--s1) 0 0;
 }
 .confirm-msg {
   font-size: 16px;

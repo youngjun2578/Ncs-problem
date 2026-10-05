@@ -33,6 +33,13 @@
     font-size: 10.5pt;
     line-height: 1.55;
   }
+  .print-only {
+    display: block !important;
+  }
+  .print-note {
+    margin: 0 0 4mm;
+    font-weight: 600;
+  }
   .no-print,
   .masthead,
   .site-footer nav,
