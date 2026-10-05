@@ -114,6 +114,7 @@ export type ApiErrorCode =
   | 'method_not_allowed'
   | 'payload_too_large'
   | 'server_misconfigured'
+  | 'not_found'
   | 'auth_invalid'
   | 'service_unavailable'
   | 'internal';

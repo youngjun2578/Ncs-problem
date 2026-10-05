@@ -108,6 +108,13 @@ try {
       ok(r.status === 200 && isDeepStrictEqual(r.json, JSON.parse(JSON.stringify(expected))), `꺼짐: 로그인 헤더(${auth?.slice(0, 12) ?? '없음'}) 무시, 전체 응답 동일`);
       ok(!('gated' in r.json) && JSON.stringify(Object.keys(r.json)) === JSON.stringify(['meta', 'summary', 'areaDetails', 'explanations']), '꺼짐: gated 필드 없음, 키 순서 이전과 같음');
     }
+    // 계정 삭제 API도 꺼져 있으면 없는 경로처럼 404, 설정 값·내부 오류 문구 없음
+    for (const [method, auth] of [['POST', `Bearer ${userToken('google')}`], ['POST', undefined], ['GET', undefined]] as const) {
+      const d = await handleAccountDelete(new Request('http://x/api/account-delete', { method, headers: auth ? { authorization: auth } : {} }));
+      const text = await d.text();
+      ok(d.status === 404 && JSON.parse(text).error === 'not_found', `꺼짐: 삭제 ${method}(토큰 ${auth ? '있음' : '없음'}) → 404 not_found (${d.status})`);
+      ok(!/SUPABASE|VITE_|환경 변수|설정 오류/.test(text), `꺼짐: 삭제 응답에 설정 이름·내부 오류 문구 없음`);
+    }
     ok(mock.state.calls.length === 0, `꺼짐: Supabase 호출 없음 (${mock.state.calls.length})`);
   }
 

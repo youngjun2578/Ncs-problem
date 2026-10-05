@@ -28,6 +28,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   method_not_allowed: '허용되지 않은 요청 방식입니다.',
   payload_too_large: '요청이 너무 큽니다.',
   server_misconfigured: '서버 설정 오류로 진단을 시작할 수 없습니다.',
+  not_found: '없는 API 경로입니다.',
   auth_invalid: '로그인이 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.',
   service_unavailable: '로그인·이용권 확인 서비스에 잠시 연결할 수 없습니다. 잠시 뒤 다시 시도해 주세요.',
   internal: '서버에서 오류가 났습니다. 잠시 뒤 다시 시도해 주세요.',
@@ -40,6 +41,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   method_not_allowed: 405,
   payload_too_large: 413,
   server_misconfigured: 500,
+  not_found: 404,
   auth_invalid: 401,
   service_unavailable: 503,
   internal: 500,
@@ -173,8 +175,12 @@ async function resolveScope(req: Request): Promise<ReportScope | Response> {
   return e.active ? 'full' : 'free';
 }
 
-/** POST /api/account-delete: 로그인한 본인의 이용권 행과 계정을 삭제한다 */
+/**
+ * POST /api/account-delete: 로그인한 본인의 이용권 행과 계정을 삭제한다.
+ * 기능 스위치가 꺼져 있으면 없는 경로처럼 404만 돌려준다(개발 서버의 없는 /api/* 응답과 같은 형식, 설정 값은 보지 않음).
+ */
 export async function handleAccountDelete(req: Request): Promise<Response> {
+  if (!monetizationEnabled()) return apiError('not_found');
   if (req.method !== 'POST') return apiError('method_not_allowed');
   try {
     const token = bearer(req);
