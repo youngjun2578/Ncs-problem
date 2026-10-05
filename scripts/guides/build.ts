@@ -7,7 +7,7 @@
  *  - 예제: 본문의 <!-- example: 템플릿id 시드 --> 줄을 엔진 문제 + 직접 계산한 풀이로 바꾼다(examples.ts에서 검산)
  *  - 내용 검사: 리포트용 문구·템플릿 이름·이용권 관련 낱말이 들어가면 빌드를 멈춘다
  */
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { marked } from 'marked';
 import { buildExample, type Example } from './examples.js';
@@ -95,6 +95,7 @@ export function parseGuide(file: string, text: string): Guide {
 
 export function loadGuides(root = '.'): Guide[] {
   const dir = resolve(root, CONTENT_DIR);
+  if (!existsSync(dir)) return [];
   const files = readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
   const guides = files.map((f) => parseGuide(`${CONTENT_DIR}/${f}`, readFileSync(join(dir, f), 'utf8')));
   const slugs = new Set(guides.map((g) => g.slug));
