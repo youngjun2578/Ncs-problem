@@ -230,6 +230,8 @@ const crumbs = (items: [string, string][]) => ({
   itemListElement: items.map(([name, path], i) => ({ '@type': 'ListItem', position: i + 1, name, item: `%VITE_SITE_URL%${path}` })),
 });
 
+/** 머리말 로그인/내 계정 버튼(다른 페이지와 같은 진입점). 이용권 기능이 꺼진 빌드에서는 빌드 분기가 통째로 지운다 */
+const LOGIN_SCRIPT = '<!--#if monetization-->\n<script type="module" src="/src/ui/site.ts"></script><!--#endif-->';
 const DRAFT_BADGE = '<p class="draft-badge">초안 · 개발 서버에서만 보이며 운영 빌드에는 포함되지 않습니다.</p>';
 const SOURCE_NOTE = '이 글의 예제는 이 사이트가 직접 만든 문제 생성 규칙으로 만든 연습용 문제이며, 실제 채용 시험 문제가 아닙니다.';
 
@@ -274,7 +276,7 @@ ${html}
   }
   <p class="source-note">${SOURCE_NOTE}</p>
 </main>
-<!--#footer-->
+<!--#footer-->${LOGIN_SCRIPT}
 </body>
 </html>
 `;
@@ -316,7 +318,7 @@ function indexPage(list: Guide[], dev: boolean): string {
 ${groups}
   <p class="source-note">${SOURCE_NOTE.replace('이 글의', '가이드의')}</p>
 </main>
-<!--#footer-->
+<!--#footer-->${LOGIN_SCRIPT}
 </body>
 </html>
 `;
