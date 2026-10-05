@@ -69,7 +69,7 @@
   .area-toggle::after {
     display: none;
   }
-  .area-row {
+  .area h3 {
     break-after: avoid;
   }
   .area-row > * {

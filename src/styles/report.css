@@ -114,6 +114,7 @@
   font-weight: 600;
   color: var(--ink);
   text-align: left;
+  white-space: nowrap;
   cursor: pointer;
 }
 .area-toggle:hover {
