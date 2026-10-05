@@ -5,14 +5,17 @@
  * 시드마다 12문항(문구·보기·도표·정답·해설)과,
  * 답 패턴 3가지(전부 정답 / 전부 오답 / 섞음) × 시드별로 다른 풀이 시간에 대한 리포트 전체를 저장한다.
  * 한 줄에 시드 하나(JSON Lines).
+ *
+ * 주의: 이 파일은 서버 이전 전 코드로 한 번 만든 기준값이다. 다시 실행하면 기준이 현재 코드로 바뀌므로,
+ * 엔진·템플릿·리포트 규칙을 의도적으로 바꾼 경우에만 다시 만든다. 비교는 scripts/golden-compare.ts.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
-import { TEMPLATES } from '../src/registry';
-import { AREAS, AREA_BY_ID } from '../src/areas';
-import { generateSet } from '../src/engine/set';
-import { analyze, type Attempt } from '../src/report/analyze';
-import type { Problem } from '../src/engine/types';
+import { TEMPLATES } from '../server/registry.js';
+import { AREAS, AREA_BY_ID } from '../server/areas.js';
+import { generateSet } from '../server/engine/set.js';
+import { analyze, type Attempt } from '../server/report/analyze.js';
+import type { Problem } from '../server/engine/types.js';
 
 export const GOLDEN_FILE = 'tests/golden/golden.jsonl.gz';
 export const SEED_COUNT = 40;

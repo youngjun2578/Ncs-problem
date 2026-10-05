@@ -1,8 +1,8 @@
 import '../styles/main.css';
-import { TEMPLATES } from '../registry';
-import { AREAS } from '../areas';
-import { generateSet } from '../engine/set';
-import { newSeed } from '../engine/rng';
+import { TEMPLATES } from '../../server/registry';
+import { AREAS } from '../../server/areas';
+import { generateSet } from '../../server/engine/set';
+import { newSeed } from '../../server/engine/rng';
 import { runTest } from './test';
 import { renderResult } from './result';
 

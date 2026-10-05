@@ -1,9 +1,9 @@
-import type { Problem } from '../engine/types';
-import { AREA_BY_ID } from '../areas';
-import { renderChart, renderFigure } from '../charts/render';
+import type { Problem } from '../../server/engine/types';
+import { AREA_BY_ID } from '../../server/areas';
+import { renderChart, renderFigure } from '../../shared/charts/render';
 import { CIRC, confirmDialog, fmtClock, prefersReducedMotion } from './dom';
 
-import type { Attempt } from '../report/analyze';
+import type { Attempt } from '../../server/report/analyze';
 export type { Attempt };
 
 const ADVANCE_MS = 380;

@@ -1,7 +1,7 @@
-import type { Problem } from '../engine/types';
-import { analyze, LEVEL_LABEL, type Attempt, type AreaReport, type Report } from '../report/analyze';
-import { AREA_BY_ID } from '../areas';
-import { renderChart, renderFigure } from '../charts/render';
+import type { Problem } from '../../server/engine/types';
+import { analyze, LEVEL_LABEL, type Attempt, type AreaReport, type Report } from '../../server/report/analyze';
+import { AREA_BY_ID } from '../../server/areas';
+import { renderChart, renderFigure } from '../../shared/charts/render';
 import { CIRC, esc, fmtDuration } from './dom';
 
 const pct = (r: number) => `${Math.round(r * 100)}%`;
