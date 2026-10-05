@@ -3,7 +3,7 @@ slug: concentration-mix-water-evaporation
 title: "농도 문제(소금물): 섞기, 물 넣기, 증발"
 description: 소금물·설탕물 농도 문제를 두 용액 섞기, 물 넣어 묽히기, 물 증발시키기 세 가지로 나누어, 녹아 있는 양을 기준으로 푸는 순서를 예제로 정리합니다.
 area: 기초연산
-status: draft
+status: published
 updated: 2026-10-05
 related: [work-rate-one-unit, mean-median, growth-rate-change]
 ---

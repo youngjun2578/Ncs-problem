@@ -3,7 +3,7 @@ slug: speed-round-trip-average
 title: 속력·거리·시간 문제: 왕복 평균 속력 함정
 description: 갈 때와 올 때 속력이 다른 왕복 문제에서 평균 속력을 구하는 순서와, 두 사람이 마주 보고 출발해 만나는 문제를 예제로 정리합니다.
 area: 기초연산
-status: draft
+status: published
 updated: 2026-10-05
 related: [ncs-math-overview, work-rate-one-unit, mean-median]
 ---

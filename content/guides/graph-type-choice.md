@@ -3,7 +3,7 @@ slug: graph-type-choice
 title: "도표작성: 그래프 종류 고르는 기준"
 description: 보여 주려는 목적이 시간에 따른 흐름인지, 전체 가운데 몫인지, 두 수치의 관계인지에 따라 꺾은선그래프, 원그래프, 점그래프를 고르는 기준을 예제로 정리합니다.
 area: 도표작성
-status: draft
+status: published
 updated: 2026-10-05
 related: [ncs-math-overview, percent-point-share]
 ---

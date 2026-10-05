@@ -3,7 +3,7 @@ slug: growth-rate-change
 title: 증가율과 증가량, 증감률 계산 정리
 description: 늘어난 양(증가량)과 늘어난 비율(증가율)을 구분하고, 기준값을 정해 증감률을 구하는 방법과 증감이 두 번 이어질 때의 계산을 예제로 정리합니다.
 area: 기초연산
-status: draft
+status: published
 updated: 2026-10-05
 related: [concentration-mix-water-evaporation, percent-point-share]
 ---

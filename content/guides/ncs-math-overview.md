@@ -3,7 +3,7 @@ slug: ncs-math-overview
 title: NCS 수리능력, 4개 영역 한눈에 보기
 description: NCS 수리능력을 기초연산·기초통계·도표분석·도표작성 4개 영역으로 나누어, 영역마다 어떤 유형이 나오고 어떤 순서로 공부하면 좋은지 정리한 안내 글입니다.
 area: 종합
-status: draft
+status: published
 updated: 2026-10-05
 related: [speed-round-trip-average, graph-type-choice, permutation-combination]
 ---

@@ -3,7 +3,7 @@ slug: percent-point-share
 title: "%와 %p, 비중과 비율 헷갈리지 않기"
 description: 비율끼리의 차이를 나타내는 %p와 비율이 몇 % 변했는지를 나타내는 %를 구분하고, 전체에서 한 항목이 차지하는 비중을 구하는 방법을 표 예제로 정리합니다.
 area: 도표분석
-status: draft
+status: published
 updated: 2026-10-05
 related: [growth-rate-change, graph-type-choice]
 ---
