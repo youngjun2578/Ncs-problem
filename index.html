@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NCS 수리능력 진단 · 무료 테스트</title>
-<meta name="description" content="NCS 수리능력 진단은 기초연산·기초통계·도표분석·도표작성 4개 영역을 12문항으로 점검하고 영역별 정답률·풀이 시간·틀린 패턴과 문항별 해설을 알려 주는 무료 NCS 테스트입니다. 풀 때마다 숫자가 바뀌는 NCS 수리 문제로 연습할 수 있으며, 회원가입이 필요 없습니다.">
+<meta name="description" content="<!--#if monetization-->NCS 수리능력 진단은 기초연산·기초통계·도표분석·도표작성 4개 영역을 12문항으로 점검하고 영역별 정답률·풀이 시간을 알려 주는 NCS 테스트입니다. 첫 진단은 회원가입 없이 무료이며, 이용권으로 새 문제 진단과 전 문항 해설, 틀린 패턴 등 영역별 상세를 볼 수 있습니다.<!--#else-->NCS 수리능력 진단은 기초연산·기초통계·도표분석·도표작성 4개 영역을 12문항으로 점검하고 영역별 정답률·풀이 시간·틀린 패턴과 문항별 해설을 알려 주는 무료 NCS 테스트입니다. 풀 때마다 숫자가 바뀌는 NCS 수리 문제로 연습할 수 있으며, 회원가입이 필요 없습니다.<!--#endif-->">
 <meta name="naver-site-verification" content="602e92949ca41d7e015bbe526f2be2313958f6a4" />
 <link rel="canonical" href="%VITE_SITE_URL%/">
 <meta name="theme-color" content="#1b2f55" media="(prefers-color-scheme: light)">
@@ -14,7 +14,7 @@
 <meta property="og:locale" content="ko_KR">
 <meta property="og:site_name" content="NCS 수리능력 진단">
 <meta property="og:title" content="NCS 수리능력 진단 · 무료 테스트">
-<meta property="og:description" content="NCS 수리능력 진단: 4개 영역 12문항으로 영역별 정답률·풀이 시간·틀린 패턴과 문항별 해설을 확인하는 무료 NCS 테스트입니다.">
+<meta property="og:description" content="<!--#if monetization-->NCS 수리능력 진단: 4개 영역 12문항으로 영역별 정답률·풀이 시간을 확인하는 NCS 테스트입니다. 첫 진단은 무료이며, 이용권으로 전 문항 해설과 영역별 상세를 볼 수 있습니다.<!--#else-->NCS 수리능력 진단: 4개 영역 12문항으로 영역별 정답률·풀이 시간·틀린 패턴과 문항별 해설을 확인하는 무료 NCS 테스트입니다.<!--#endif-->">
 <meta property="og:url" content="%VITE_SITE_URL%/">
 <meta property="og:image" content="%VITE_SITE_URL%/og.png">
 <meta property="og:image:width" content="1200">
@@ -22,7 +22,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/src/styles/main.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"NCS 수리능력 진단","applicationCategory":"EducationalApplication","operatingSystem":"Web","inLanguage":"ko","isAccessibleForFree":true,"description":"기초연산·기초통계·도표분석·도표작성 4개 영역을 점검하는 무료 NCS 테스트와 영역별 리포트"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"NCS 수리능력 진단","applicationCategory":"EducationalApplication","operatingSystem":"Web","inLanguage":"ko","isAccessibleForFree":true,<!--#if monetization-->"description":"기초연산·기초통계·도표분석·도표작성 4개 영역을 점검하는 NCS 테스트(첫 진단 무료)와 영역별 리포트"<!--#else-->"description":"기초연산·기초통계·도표분석·도표작성 4개 영역을 점검하는 무료 NCS 테스트와 영역별 리포트"<!--#endif-->}
 </script>
 </head>
 <body>
@@ -39,8 +39,8 @@
     <dl class="hero-facts">
       <div><dt>구성</dt><dd>12문항 · 5지선다 (4개 영역 3문항씩) · 약 15분</dd></div>
       <div><dt>준비물</dt><dd>계산용 종이와 펜</dd></div>
-      <div><dt>진행</dt><dd>이전 문항으로 돌아가 답을 바꿀 수 있고, 정답과 해설은 모두 푼 뒤 공개됩니다.</dd></div>
-      <div><dt>기록</dt><dd>회원가입 없이 무료입니다. 답안과 풀이 시간은 채점을 위해 서버로 전송되며, 채점이 끝나면 저장하지 않습니다. 새로 고치면 처음부터 다시 시작합니다.</dd></div>
+      <div><dt>진행</dt><!--#if monetization--><dd>이전 문항으로 돌아가 답을 바꿀 수 있고, 정답은 모두 푼 뒤 공개됩니다. 무료 진단에서는 영역별 요약과 1·2번 해설을 볼 수 있습니다.</dd><!--#else--><dd>이전 문항으로 돌아가 답을 바꿀 수 있고, 정답과 해설은 모두 푼 뒤 공개됩니다.</dd><!--#endif--></div>
+      <div><dt>기록</dt><!--#if monetization--><dd>첫 진단은 회원가입 없이 무료입니다. 로그인은 이용권 구매에만 필요합니다(구글·카카오). 답안과 풀이 시간은 채점을 위해 서버로 전송되며, 채점이 끝나면 저장하지 않습니다. 새로 고치면 처음부터 다시 시작합니다.</dd><!--#else--><dd>회원가입 없이 무료입니다. 답안과 풀이 시간은 채점을 위해 서버로 전송되며, 채점이 끝나면 저장하지 않습니다. 새로 고치면 처음부터 다시 시작합니다.</dd><!--#endif--></div>
     </dl>
   </section>
 
@@ -56,7 +56,7 @@
         <li><div class="choice"><span class="mark" aria-hidden="true">⑤</span>시속 60km</div></li>
       </ol>
     </div>
-    <p class="muted" style="margin-top:12px">정답은 ③ 48km입니다. ④ 50km는 두 속력을 단순 평균했을 때 나오는 값으로, 이런 보기를 고르면 리포트에 "산술평균 착각" 패턴으로 표시됩니다.</p>
+    <p class="muted" style="margin-top:12px">정답은 ③ 48km입니다. ④ 50km는 두 속력을 단순 평균했을 때 나오는 값으로, <!--#if monetization-->이런 보기를 고르면 영역별 상세 리포트(이용권)에 "산술평균 착각" 패턴으로 표시됩니다.<!--#else-->이런 보기를 고르면 리포트에 "산술평균 착각" 패턴으로 표시됩니다.<!--#endif--></p>
   </section>
 </main>
 <!--#footer--><!--#if monetization-->
