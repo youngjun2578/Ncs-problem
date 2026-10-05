@@ -155,3 +155,18 @@
   font-weight: 700;
   color: var(--accent);
 }
+
+/* 운영자 경험 문단(1인칭) */
+.guide blockquote {
+  margin: var(--s4) 0;
+  padding: var(--s3) var(--s4);
+  border-left: 3px solid var(--rule-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.guide blockquote p {
+  margin: 0 0 var(--s2);
+}
+.guide blockquote p:last-child {
+  margin-bottom: 0;
+}
