@@ -5,7 +5,7 @@ description: 뽑은 사람의 역할이 다르면 순열, 같으면 조합이라
 area: 기초통계
 status: draft
 updated: 2026-10-05
-related: [probability-fraction, mean-median, ncs-math-overview]
+related: [ncs-math-overview, probability-fraction]
 ---
 
 ## 이 유형은 무엇인가

@@ -5,7 +5,7 @@ description: 늘어난 양(증가량)과 늘어난 비율(증가율)을 구분�
 area: 기초연산
 status: draft
 updated: 2026-10-05
-related: [percent-point-share, ncs-math-overview, concentration-mix-water-evaporation]
+related: [concentration-mix-water-evaporation, percent-point-share]
 ---
 
 ## 이 유형은 무엇인가

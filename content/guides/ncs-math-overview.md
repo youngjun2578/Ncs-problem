@@ -5,7 +5,7 @@ description: NCS 수리능력을 기초연산·기초통계·도표분석·도�
 area: 종합
 status: draft
 updated: 2026-10-05
-related: [speed-round-trip-average, growth-rate-change, graph-type-choice]
+related: [speed-round-trip-average, graph-type-choice, permutation-combination]
 ---
 
 ## 이 글에서 다루는 것

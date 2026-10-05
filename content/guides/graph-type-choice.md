@@ -5,7 +5,7 @@ description: 보여 주려는 목적이 시간에 따른 흐름인지, 전체 �
 area: 도표작성
 status: draft
 updated: 2026-10-05
-related: [percent-point-share, growth-rate-change, ncs-math-overview]
+related: [ncs-math-overview, percent-point-share]
 ---
 
 ## 이 유형은 무엇인가
@@ -35,9 +35,9 @@ related: [percent-point-share, growth-rate-change, ncs-math-overview]
 
 ## 대표 예제
 
-<!-- example: chartMake.typeFit 100 -->
+<!-- example: chartMake.typeFit 101 -->
 
-<!-- example: chartMake.typeFit 108 -->
+<!-- example: chartMake.typeFit 112 -->
 
 <!-- example: chartMake.typeFit 102 -->
 

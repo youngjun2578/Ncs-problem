@@ -5,7 +5,7 @@ description: 소금물·설탕물 농도 문제를 두 용액 섞기, 물 넣어
 area: 기초연산
 status: draft
 updated: 2026-10-05
-related: [mean-median, growth-rate-change, speed-round-trip-average]
+related: [work-rate-one-unit, mean-median, growth-rate-change]
 ---
 
 ## 이 유형은 무엇인가

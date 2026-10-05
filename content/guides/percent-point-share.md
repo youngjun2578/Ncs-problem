@@ -5,7 +5,7 @@ description: 비율끼리의 차이를 나타내는 %p와 비율이 몇 % 변했
 area: 도표분석
 status: draft
 updated: 2026-10-05
-related: [growth-rate-change, ncs-math-overview, graph-type-choice]
+related: [growth-rate-change, graph-type-choice]
 ---
 
 ## 이 유형은 무엇인가

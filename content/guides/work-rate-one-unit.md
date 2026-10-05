@@ -5,7 +5,7 @@ description: 혼자 하면 며칠, 함께 하면 며칠을 묻는 일의 양 문
 area: 기초연산
 status: draft
 updated: 2026-10-05
-related: [speed-round-trip-average, concentration-mix-water-evaporation, ncs-math-overview]
+related: [speed-round-trip-average, concentration-mix-water-evaporation]
 ---
 
 ## 이 유형은 무엇인가

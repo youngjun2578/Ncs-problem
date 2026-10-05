@@ -16,6 +16,7 @@ import { renderChart, renderFigure } from '../../shared/charts/render.js';
 import { MISTAKES } from '../../server/engine/mistakes.js';
 import { AREAS } from '../../server/areas.js';
 import { TEMPLATES } from '../../server/registry.js';
+import { generateQuestions } from '../../server/diagnosis.js';
 
 export const CONTENT_DIR = 'content/guides';
 /** 생성 HTML을 두는 곳(프로젝트 루트 기준). .gitignore에 있음 */
@@ -100,6 +101,11 @@ export function loadGuides(root = '.'): Guide[] {
   const guides = files.map((f) => parseGuide(`${CONTENT_DIR}/${f}`, readFileSync(join(dir, f), 'utf8')));
   const slugs = new Set(guides.map((g) => g.slug));
   for (const g of guides) for (const r of g.related) if (!slugs.has(r)) throw new Error(`${g.file}: related에 없는 글 ${r}`);
+  // 관련 글은 서로 링크한다(A가 B를 가리키면 B도 A를 가리킨다)
+  for (const g of guides)
+    for (const r of g.related)
+      if (!guides.find((x) => x.slug === r)!.related.includes(g.slug)) throw new Error(`${g.file}: 관련 글 ${r}도 이 글(${g.slug})을 related에 넣어야 합니다`);
+  for (const g of guides) if (g.related.length < 2 || g.related.length > 3) throw new Error(`${g.file}: 관련 글은 2~3개`);
   const dupTitle = guides.find((g, i) => guides.findIndex((x) => x.title === g.title) !== i);
   if (dupTitle) throw new Error(`제목 중복: ${dupTitle.title}`);
   const dupDesc = guides.find((g, i) => guides.findIndex((x) => x.description === g.description) !== i);
@@ -108,6 +114,14 @@ export function loadGuides(root = '.'): Guide[] {
 }
 
 /* ---------- 내용 검사 ---------- */
+
+/** scripts/check-bundle.ts와 같은 시드로 만든 진단 문항의 문제·해설 문장 */
+const BUNDLE_CHECK_SEEDS = [1, 2, 3, 12345, 987654321];
+let needleCache: string[] | null = null;
+function bundleNeedles(): string[] {
+  needleCache ??= [...new Set(BUNDLE_CHECK_SEEDS.flatMap((s) => generateQuestions(s).flatMap((q) => [q.text, ...q.steps])))].filter((n) => n.length >= 4);
+  return needleCache;
+}
 
 /** 가이드에 들어가면 안 되는 문구: 결과 리포트의 틀린 패턴 문구·영역 설명(별도 기능의 내용), 템플릿 이름, 이용권 이야기 */
 function lint(g: Guide, html: string) {
@@ -120,6 +134,8 @@ function lint(g: Guide, html: string) {
   for (const a of AREAS) if (text.includes(a.description)) problems.push(`영역 설명 문장(${a.name})`);
   for (const t of TEMPLATES) if (html.includes(t.id)) problems.push(`템플릿 id ${t.id}`);
   for (const w of ['이용권', '결제', '로그인', '유료', '구독']) if (text.includes(w)) problems.push(`낱말 "${w}"`);
+  // 번들 검사(scripts/check-bundle.ts)가 찾는 문제·해설 문장과 겹치면 안 된다. 같은 시드 목록을 쓴다.
+  for (const n of bundleNeedles()) if (text.includes(n)) problems.push(`번들 검사 문장과 겹침 "${n.slice(0, 30)}…" (다른 시드의 예제로 바꾸세요)`);
   for (const w of ['합격률', '출제 비율', '출제 경향', '시험 시간']) if (text.includes(w)) problems.push(`외부 사실처럼 보이는 표현 "${w}"`);
   // 본문 숫자 검산: 목록의 문장이 글에 그대로 있고 계산이 맞아야 한다
   for (const c of CLAIMS.filter((c) => c.slug === g.slug)) {

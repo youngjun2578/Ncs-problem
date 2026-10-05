@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "test:golden": "tsx scripts/golden-compare.ts",
     "test:api": "tsx scripts/api-test.ts",
-    "check:bundle": "tsx scripts/check-bundle.ts"
+    "check:bundle": "tsx scripts/check-bundle.ts",
+    "check:guides": "tsx scripts/guides/check-dist.ts",
+    "guides": "tsx scripts/guides/build.ts --drafts"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",

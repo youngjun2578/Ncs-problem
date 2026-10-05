@@ -5,7 +5,7 @@ description: 인원이 다른 두 집단의 전체 평균, 목표 평균을 맞�
 area: 기초통계
 status: draft
 updated: 2026-10-05
-related: [concentration-mix-water-evaporation, speed-round-trip-average, probability-fraction]
+related: [speed-round-trip-average, concentration-mix-water-evaporation, probability-fraction]
 ---
 
 ## 이 유형은 무엇인가

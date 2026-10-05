@@ -5,7 +5,7 @@ description: 전체 경우의 수와 원하는 경우의 수를 세어 확률을
 area: 기초통계
 status: draft
 updated: 2026-10-05
-related: [permutation-combination, mean-median, ncs-math-overview]
+related: [mean-median, permutation-combination]
 ---
 
 ## 이 유형은 무엇인가

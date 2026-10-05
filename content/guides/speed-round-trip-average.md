@@ -5,7 +5,7 @@ description: 갈 때와 올 때 속력이 다른 왕복 문제에서 평균 속�
 area: 기초연산
 status: draft
 updated: 2026-10-05
-related: [work-rate-one-unit, mean-median, ncs-math-overview]
+related: [ncs-math-overview, work-rate-one-unit, mean-median]
 ---
 
 ## 이 유형은 무엇인가
