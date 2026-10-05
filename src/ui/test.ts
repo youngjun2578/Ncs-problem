@@ -1,10 +1,6 @@
-import type { Problem } from '../../server/engine/types';
-import { AREA_BY_ID } from '../../server/areas';
+import type { PublicQuestion } from '../../shared/api';
 import { renderChart, renderFigure } from '../../shared/charts/render';
 import { CIRC, confirmDialog, fmtClock, prefersReducedMotion } from './dom';
-
-import type { Attempt } from '../../server/report/analyze';
-export type { Attempt };
 
 const ADVANCE_MS = 380;
 
@@ -12,6 +8,7 @@ const ADVANCE_MS = 380;
  * 풀이 화면. 보기를 고르면 자동으로 다음 문항으로 넘어가고, 이전/다음 버튼으로 오갈 수 있다.
  * 정답 여부는 끝날 때까지 보여주지 않는다.
  * 풀이 시간은 문항별로 누적한다: 돌아가서 다시 본 시간도 그 문항에 더한다.
+ * 시간은 performance.now()로 잰다(기기 시계가 바뀌어도 음수·급변이 생기지 않는다).
  */
 export interface TestExits {
   /** 홈으로 */
@@ -20,12 +17,12 @@ export interface TestExits {
   restart: () => void;
 }
 
-export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Attempt[], totalSec: number) => void, exits: TestExits) {
+export function runTest(app: HTMLElement, qs: PublicQuestion[], onDone: (answers: number[], secs: number[]) => void, exits: TestExits) {
   const n = qs.length;
   const picked: (number | undefined)[] = Array(n).fill(undefined);
   const secs: number[] = Array(n).fill(0);
-  const t0 = Date.now();
-  let qStart = Date.now();
+  const t0 = performance.now();
+  let qStart = t0;
   let i = 0;
   let locked = false;
   /** 나가거나 끝난 뒤에는 남은 자동 이동 타이머가 화면을 건드리지 않게 한다 */
@@ -34,12 +31,12 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
   const timer = window.setInterval(tick, 1000);
   function tick() {
     const el = document.getElementById('clock');
-    if (el) el.textContent = fmtClock(Math.floor((Date.now() - t0) / 1000));
+    if (el) el.textContent = fmtClock(Math.floor((performance.now() - t0) / 1000));
   }
 
   /** 지금 문항에 머문 시간을 누적하고 시계를 다시 맞춘다 */
   function settleTime() {
-    const now = Date.now();
+    const now = performance.now();
     secs[i] += (now - qStart) / 1000;
     qStart = now;
   }
@@ -73,7 +70,7 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
         </div>
         <div class="progress-top">
           <span class="count"><b>${i + 1}</b> / ${n}</span>
-          <span class="area-now">${AREA_BY_ID[q.area].name}</span>
+          <span class="area-now">${q.areaName}</span>
           <span class="clock" aria-label="경과 시간"><span id="clock">00:00</span></span>
         </div>
         <div class="segs" role="progressbar" aria-label="풀이 진행" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${doneCount}" aria-valuetext="${n}문항 중 ${doneCount}문항 답함">${segs}</div>
@@ -131,9 +128,8 @@ export function runTest(app: HTMLElement, qs: Problem[], onDone: (attempts: Atte
     if (leaving || stopped) return;
     settleTime();
     stop();
-    const attempts: Attempt[] = picked.map((p, k) => ({ picked: p as number, sec: secs[k] }));
-    // 총 풀이 시간 = 문항별 시간의 합 (리포트의 문항당 평균과 같은 기준)
-    onDone(attempts, Math.round(secs.reduce((a, b) => a + b, 0)));
+    // 채점과 총 풀이 시간 계산은 서버가 한다
+    onDone(picked as number[], secs.slice());
   }
 
   /** 다음 칸: 마지막 문항이면 아직 안 푼 첫 문항, 모두 풀었으면 결과 */
