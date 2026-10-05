@@ -11,7 +11,8 @@
  */
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import { PASS_PRICE_KRW } from '../../shared/product';
-import { confirmDialog, esc } from './dom';
+import { esc } from './dom';
+import '../styles/account.css';
 
 export type Provider = 'google' | 'kakao';
 /** 로그인 방식 표시(이미 로그인한 계정의 app_metadata.provider). 카카오 스위치와 관계없이 둔다. */
@@ -199,36 +200,91 @@ export function setLeaveWarning(message: string | null) {
   leaveWarning = message;
 }
 
+const CLOSE_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+/** Google "G" 로고(표준 4색). 색과 모양을 바꾸지 않는다. */
+const GOOGLE_LOGO =
+  '<svg class="gsi-logo" viewBox="0 0 48 48" aria-hidden="true" focusable="false">' +
+  '<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>' +
+  '<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>' +
+  '<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>' +
+  '<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>' +
+  '</svg>';
+
+let modalSeq = 0;
+
+/**
+ * 공통 모달(<dialog>): aria-modal, 제목·설명 연결, Tab이 창 안에서만 돌기, Esc로 닫기, 닫으면 연 자리로 포커스 되돌리기.
+ * body: 제목 아래 내용 HTML. 닫기(X) 버튼은 closable일 때만.
+ */
+function openModal(opts: { title: string; body: string; className?: string; closable?: boolean; describedBy?: string }) {
+  const id = `m${++modalSeq}`;
+  const opener = document.activeElement as HTMLElement | null;
+  const dlg = document.createElement('dialog');
+  dlg.className = `auth-modal ${opts.className ?? ''}`.trim();
+  dlg.setAttribute('aria-modal', 'true');
+  dlg.setAttribute('aria-labelledby', `${id}-title`);
+  if (opts.describedBy) dlg.setAttribute('aria-describedby', `${id}-${opts.describedBy}`);
+  dlg.innerHTML = `
+    ${opts.closable === false ? '' : `<button type="button" class="auth-close" data-close aria-label="닫기">${CLOSE_ICON}</button>`}
+    <h2 id="${id}-title" class="auth-title">${esc(opts.title)}</h2>
+    ${opts.body.replace(/id="@/g, `id="${id}-`)}`;
+  let onClose: () => void = () => {};
+  const close = () => {
+    if (!dlg.open) return;
+    dlg.close();
+    dlg.remove();
+    onClose();
+    if (opener?.isConnected) opener.focus();
+  };
+  dlg.addEventListener('cancel', (e) => {
+    e.preventDefault();
+    close();
+  });
+  dlg.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const items = [...dlg.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')].filter((el) => el.offsetParent !== null);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && (document.activeElement === first || !dlg.contains(document.activeElement))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+  dlg.querySelector('[data-close]')?.addEventListener('click', close);
+  document.body.appendChild(dlg);
+  dlg.showModal();
+  return { dlg, close, onClose: (f: () => void) => (onClose = f) };
+}
+
+/** 알림·선택 창. 고른 값(닫으면 null)을 돌려준다. */
 function choiceDialog<T extends string>(title: string, message: string, buttons: { label: string; value: T; primary?: boolean }[]): Promise<T | null> {
   return new Promise((resolve) => {
-    const dlg = document.createElement('dialog');
-    dlg.className = 'confirm';
-    dlg.setAttribute('aria-labelledby', 'choice-title');
-    dlg.innerHTML = `
-      <h2 id="choice-title" class="confirm-title">${esc(title)}</h2>
-      ${message ? `<p class="confirm-msg">${esc(message)}</p>` : ''}
-      <div class="confirm-actions confirm-stack">
+    let picked: T | null = null;
+    const m = openModal({
+      title,
+      describedBy: message ? 'msg' : undefined,
+      body: `
+      ${message ? `<p id="@msg" class="auth-lead">${esc(message)}</p>` : ''}
+      <div class="acct-actions">
         ${buttons.map((b, i) => `<button type="button" class="${b.primary ? 'btn-primary' : 'btn-secondary'}" data-i="${i}">${esc(b.label)}</button>`).join('')}
-        <button type="button" class="btn-text" data-i="-1">닫기</button>
-      </div>`;
-    const done = (v: T | null) => {
-      dlg.close();
-      dlg.remove();
-      resolve(v);
-    };
-    dlg.addEventListener('cancel', (e) => {
-      e.preventDefault();
-      done(null);
+        ${buttons.length ? '' : '<button type="button" class="btn-secondary" data-close-btn>확인</button>'}
+      </div>`,
     });
-    dlg.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+    m.onClose(() => resolve(picked));
+    m.dlg.querySelectorAll<HTMLButtonElement>('[data-i]').forEach((b) =>
       b.addEventListener('click', () => {
-        const i = Number(b.dataset.i);
-        done(i < 0 ? null : buttons[i].value);
+        picked = buttons[Number(b.dataset.i)].value;
+        m.close();
       }),
     );
-    document.body.appendChild(dlg);
-    dlg.showModal();
-    dlg.querySelector<HTMLButtonElement>('button')!.focus();
+    m.dlg.querySelector('[data-close-btn]')?.addEventListener('click', () => m.close());
+    m.dlg.querySelector<HTMLButtonElement>('.acct-actions button')?.focus();
   });
 }
 
@@ -248,19 +304,34 @@ export async function startSignIn(provider: Provider, returnPath: string): Promi
 }
 
 /**
- * 로그인 방식을 고르게 한 뒤 로그인 화면으로 보낸다.
+ * 로그인 창을 열고, 고른 방식의 로그인 화면으로 보낸다.
  * returnPath: 로그인 뒤 돌아올 경로(같은 사이트 안). Supabase 대시보드의 Redirect URLs에 등록돼 있어야 한다.
+ * purpose: 'purchase'면 이용권 구매 버튼에서 연 것(안내 문구가 다르다).
  */
-export async function chooseAndSignIn(returnPath: string, reason = '') {
+export async function chooseAndSignIn(returnPath: string, purpose: 'login' | 'purchase' = 'login') {
   await readyPromise;
   if (!client) return notice('로그인을 쓸 수 없습니다', '로그인 기능이 아직 설정되지 않았습니다.');
-  const msg = [reason, leaveWarning].filter(Boolean).join(' ');
-  const provider = await choiceDialog<Provider>('로그인', msg, [
-    { label: '구글로 로그인', value: 'google', primary: true },
-    ...(import.meta.env.VITE_KAKAO_LOGIN_ENABLED === 'true' ? [{ label: '카카오로 로그인', value: 'kakao' as const, primary: true }] : []),
-  ]);
-  if (!provider) return;
-  await startSignIn(provider, returnPath);
+  const lead = purpose === 'purchase' ? '이용권을 구매하려면 먼저 로그인해 주세요.' : '로그인은 이용권 구매와 이용에만 필요합니다.';
+  const m = openModal({
+    title: '로그인',
+    describedBy: 'lead',
+    body: `
+    <p id="@lead" class="auth-lead">${esc(lead)}</p>
+    ${leaveWarning ? `<p class="auth-warn">${esc(leaveWarning)}</p>` : ''}
+    <div class="auth-providers">
+      <button type="button" class="gsi-btn" data-provider="google">${GOOGLE_LOGO}<span>Google로 계속하기</span></button>
+      ${import.meta.env.VITE_KAKAO_LOGIN_ENABLED === 'true' ? '<button type="button" class="btn-secondary auth-provider-alt" data-provider="kakao">카카오로 계속하기</button>' : ''}
+    </div>
+    <p class="auth-fine">이 사이트의 데이터베이스에는 계정 ID와 이용권 상태만 저장하며, 답안·진단 결과·이름·프로필 사진은 저장하지 않습니다. 로그인은 인증 서비스(Supabase Auth)가 처리하며, 인증 서비스는 로그인할 때 받은 계정 정보를 보관할 수 있습니다. <a href="/method/#privacy">개인정보 안내</a></p>`,
+  });
+  m.dlg.querySelectorAll<HTMLButtonElement>('[data-provider]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      m.dlg.querySelectorAll<HTMLButtonElement>('[data-provider]').forEach((x) => (x.disabled = true));
+      const ok = await startSignIn(b.dataset.provider as Provider, returnPath);
+      if (!ok) m.close();
+    }),
+  );
+  m.dlg.querySelector<HTMLButtonElement>('.gsi-btn')!.focus();
 }
 
 /* ---------- 이용권 ---------- */
@@ -291,7 +362,7 @@ export function passCardHtml(headingTag: 'h2' | 'h3' = 'h3', title = '이용권�
 export async function purchase() {
   await ready();
   if (state.status === 'unconfigured') return notice('이용권 구매', '이용권 기능을 준비하고 있습니다.');
-  if (state.status !== 'member') return chooseAndSignIn('/diagnosis/?auth=purchase', `이용권 구매에는 ${PROVIDERS_TEXT} 로그인이 필요합니다.`);
+  if (state.status !== 'member') return chooseAndSignIn('/diagnosis/?auth=purchase', 'purchase');
   if (state.entitlement === 'active') return notice('이미 이용권이 있습니다', '새 문제로 진단, 전 문항 해설, 영역별 상세를 이용할 수 있습니다.');
   return notice('결제는 준비 중입니다', `${PROVIDER_LABEL[state.provider ?? ''] ?? ''} 계정으로 로그인되어 있습니다. ${PRICE} 이용권 결제가 열리면 이 계정으로 구매할 수 있습니다.`.trim());
 }
@@ -365,29 +436,71 @@ function formatDate(iso: string | null) {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('ko-KR', { dateStyle: 'medium' });
 }
 
-async function accountMenu() {
+/** 내 계정 창: 로그인 방식, 이용권 상태, 이용권 구매(없을 때만), 로그아웃, 계정 삭제 */
+function accountMenu() {
   const s = state;
-  const pass = s.entitlement === 'active' ? `있음${s.purchasedAt ? ` (${formatDate(s.purchasedAt)} 구매)` : ''}` : s.entitlement === 'error' ? '확인하지 못함' : '없음';
-  const choice = await choiceDialog<'logout' | 'delete' | 'buy'>(
-    '내 계정',
-    `로그인 방식: ${PROVIDER_LABEL[s.provider ?? ''] ?? '알 수 없음'} · 이용권: ${pass}`,
-    [
-      ...(s.entitlement === 'active' ? [] : [{ label: '이용권 구매', value: 'buy' as const, primary: true }]),
-      { label: '로그아웃', value: 'logout' },
-      { label: '계정 삭제', value: 'delete' },
-    ],
-  );
-  if (choice === 'buy') await purchase();
-  if (choice === 'logout') await signOut();
-  if (choice === 'delete') await deleteAccountFlow();
+  let pass: string;
+  if (s.entitlement === 'active') {
+    const date = formatDate(s.purchasedAt);
+    pass = `<span class="pass-pill is-on">있음</span>${date ? `<span class="acct-sub">${esc(date)} 구매</span>` : ''}`;
+  } else if (s.entitlement === 'none') {
+    pass = '<span class="pass-pill is-off">없음</span><span class="acct-sub">이용권이 있으면 영역별 상세와 3번 이후 해설까지 볼 수 있습니다.</span>';
+  } else if (s.entitlement === 'error') {
+    pass = '확인하지 못함<span class="acct-sub">잠시 뒤 다시 열어 확인해 주세요.</span>';
+  } else pass = '확인하고 있습니다…';
+  const m = openModal({
+    title: '내 계정',
+    body: `
+    <dl class="acct-info">
+      <div class="acct-row"><dt>로그인 방식</dt><dd>${esc(PROVIDER_LABEL[s.provider ?? ''] ?? '알 수 없음')}</dd></div>
+      <div class="acct-row"><dt>이용권</dt><dd>${pass}</dd></div>
+    </dl>
+    <div class="acct-actions">
+      ${s.entitlement === 'none' ? '<button type="button" class="btn-primary" data-act="buy">이용권 구매</button>' : ''}
+      <button type="button" class="btn-secondary" data-act="logout">로그아웃</button>
+    </div>
+    <div class="acct-danger-zone">
+      <button type="button" class="btn-danger-text" data-act="delete">계정 삭제</button>
+    </div>`,
+  });
+  const on = (act: string, run: () => Promise<unknown> | void) =>
+    m.dlg.querySelector(`[data-act="${act}"]`)?.addEventListener('click', () => {
+      m.close();
+      void run();
+    });
+  on('buy', purchase);
+  on('logout', signOut);
+  on('delete', deleteAccountFlow);
+  m.dlg.querySelector<HTMLButtonElement>('.acct-actions button')!.focus();
+}
+
+/** 계정 삭제 확인. 삭제하면 true */
+function confirmDelete(): Promise<boolean> {
+  return new Promise((resolve) => {
+    let yes = false;
+    const m = openModal({
+      title: '계정을 삭제할까요?',
+      describedBy: 'msg',
+      body: `
+      <p id="@msg" class="auth-lead">계정과 이용권 정보가 삭제되며 되돌릴 수 없습니다. 구매한 이용권도 함께 사라집니다.</p>
+      <div class="auth-confirm-actions">
+        <button type="button" class="btn-secondary" data-no>취소</button>
+        <button type="button" class="btn-danger" data-yes>계정 삭제</button>
+      </div>`,
+    });
+    m.onClose(() => resolve(yes));
+    m.dlg.querySelector('[data-no]')!.addEventListener('click', () => m.close());
+    m.dlg.querySelector('[data-yes]')!.addEventListener('click', () => {
+      yes = true;
+      m.close();
+    });
+    // 실수로 지우지 않게 처음 포커스는 취소에
+    m.dlg.querySelector<HTMLButtonElement>('[data-no]')!.focus();
+  });
 }
 
 async function deleteAccountFlow() {
-  const ok = await confirmDialog(
-    '계정을 삭제하면 로그인 정보와 이용권 정보가 바로 삭제되며 되돌릴 수 없습니다. 구매한 이용권도 함께 사라집니다. 삭제할까요?',
-    '계정 삭제',
-  );
-  if (!ok) return;
+  if (!(await confirmDelete())) return;
   const token = await accessToken();
   if (!token) return notice('계정을 삭제하지 못했습니다', '로그인이 만료되었습니다. 다시 로그인한 뒤 시도해 주세요.');
   try {
@@ -416,7 +529,7 @@ export function mountHeader() {
     slot.hidden = false;
     if (s.status === 'member') {
       slot.innerHTML = `<button type="button" class="account-btn" aria-haspopup="dialog">내 계정${hasPass() ? '<span class="account-badge">이용권</span>' : ''}</button>`;
-      slot.querySelector('button')!.addEventListener('click', () => void accountMenu());
+      slot.querySelector('button')!.addEventListener('click', accountMenu);
     } else {
       slot.innerHTML = `<button type="button" class="account-btn" aria-haspopup="dialog" ${s.status === 'loading' ? 'disabled' : ''}>로그인</button>`;
       slot.querySelector('button')!.addEventListener('click', () => void chooseAndSignIn(window.location.pathname));

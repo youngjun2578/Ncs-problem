@@ -238,7 +238,7 @@ try {
     const on = await buildWith(true);
     const all = on.texts.map(({ t }) => t).join('\n');
     ok(['카카오로', '구글 또는 카카오', '구글·카카오'].every((m) => all.includes(m)), '(대조) 카카오 켜짐 빌드에는 카카오 버튼·안내 문구가 있음');
-    ok(off.texts.some(({ t }) => t.includes('구글로')), '(대조) 카카오 꺼짐 빌드에도 구글 로그인 버튼은 있음');
+    ok(off.texts.some(({ t }) => t.includes('Google로 계속하기')), '(대조) 카카오 꺼짐 빌드에도 Google 로그인 버튼은 있음');
     for (const b of [off, on]) rmSync(b.out, { recursive: true, force: true });
   }
 } finally {

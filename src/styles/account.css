@@ -1,0 +1,282 @@
+/*
+ * 로그인 창·내 계정 창·머리말 계정 버튼.
+ * monetization.ts에서만 불러오므로 이용권 기능이 꺼진 빌드에는 들어가지 않는다.
+ */
+
+/* ---------- 머리말 계정 버튼 ---------- */
+.account-btn {
+  min-height: 40px;
+  gap: var(--s2);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.account-btn:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
+.account-btn:focus-visible {
+  outline-offset: 2px;
+}
+.account-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 var(--s2);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ---------- 창 공통 ---------- */
+.auth-modal {
+  width: min(420px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  padding: var(--s6) var(--s5) var(--s5);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 12px 40px rgb(10 16 28 / 0.18);
+  overflow-y: auto;
+}
+.auth-modal::backdrop {
+  background: rgb(10 16 28 / 0.5);
+}
+.auth-close {
+  position: absolute;
+  top: var(--s2);
+  right: var(--s2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.auth-close:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+.auth-close svg {
+  width: 20px;
+  height: 20px;
+}
+.auth-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  padding-right: var(--s6);
+}
+.auth-lead {
+  margin-top: var(--s2);
+  color: var(--ink-2);
+  font-size: 15px;
+}
+.auth-warn {
+  margin-top: var(--s3);
+  padding: var(--s2) var(--s3);
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 14px;
+}
+.auth-providers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin-top: var(--s5);
+}
+.auth-fine {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.auth-fine a {
+  color: var(--ink-2);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Google 로그인 버튼 (Sign in with Google 브랜딩: Light / Dark 테마) ---------- */
+.gsi-btn {
+  --gsi-fill: #ffffff;
+  --gsi-stroke: #747775;
+  --gsi-text: #1f1f1f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  /* 로고 앞 12px, 로고와 글자 사이 10px, 글자 뒤 12px */
+  padding: 0 12px;
+  gap: 10px;
+  border: 1px solid var(--gsi-stroke);
+  border-radius: 4px;
+  background: var(--gsi-fill);
+  color: var(--gsi-text);
+  /* 외부 글꼴을 불러오지 않는다. 기기에 Google Sans·Roboto가 있으면 쓰고, 없으면 사이트 글꼴 */
+  font: 500 14px/20px 'Google Sans', Roboto, var(--sans);
+  letter-spacing: 0.25px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+.gsi-btn:hover {
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+}
+.gsi-btn:focus-visible {
+  outline-offset: 2px;
+}
+.gsi-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.gsi-logo {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .gsi-btn {
+    --gsi-fill: #131314;
+    --gsi-stroke: #8e918f;
+    --gsi-text: #e3e3e3;
+  }
+}
+:root[data-theme='dark'] .gsi-btn {
+  --gsi-fill: #131314;
+  --gsi-stroke: #8e918f;
+  --gsi-text: #e3e3e3;
+}
+.auth-provider-alt {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ---------- 내 계정 ---------- */
+.acct-info {
+  margin-top: var(--s4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.acct-row {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+}
+.acct-row + .acct-row {
+  border-top: 1px solid var(--rule);
+}
+.acct-row dt {
+  color: var(--muted);
+  font-size: 14px;
+}
+.acct-row dd {
+  margin: 0;
+  font-weight: 600;
+}
+.acct-sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+.pass-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 var(--s2);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.pass-pill.is-on {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.pass-pill.is-off {
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--rule);
+}
+.acct-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin-top: var(--s5);
+}
+.acct-actions .btn-primary,
+.acct-actions .btn-secondary {
+  width: 100%;
+  justify-content: center;
+}
+.acct-danger-zone {
+  margin-top: var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--rule);
+  text-align: center;
+}
+.btn-danger-text {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--s2);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--bad);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.btn-danger-text:hover {
+  background: var(--surface);
+}
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap);
+  padding: 0 var(--s5);
+  border: 1px solid var(--bad);
+  border-radius: var(--radius);
+  background: var(--bad);
+  color: var(--bg);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-danger:hover {
+  filter: brightness(1.08);
+}
+.auth-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--s2);
+  margin-top: var(--s5);
+}
+@media (max-width: 400px) {
+  .auth-modal {
+    padding: var(--s6) var(--s4) var(--s4);
+  }
+  .auth-confirm-actions > * {
+    flex: 1 1 100%;
+  }
+  .acct-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
