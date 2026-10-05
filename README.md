@@ -15,7 +15,8 @@ npm run build      # validate → 타입 검사 → vite build (검증 실패 �
 npm run preview    # 빌드 결과 미리보기 (/api/*도 동작)
 npm run test:golden    # 서버 출력 = 골든 스냅샷(서버 이전 전 출력)인지 비교
 npm run test:api       # 서버 입력 검증·토큰·응답 내용 테스트
-npm run check:bundle   # dist에 서버 전용 문구·소스맵이 없는지 검사 (build 뒤에 실행)
+npm run test:gating    # 기능 스위치·로그인·이용권에 따른 응답 나누기 테스트 (모의 Supabase)
+npm run check:bundle   # dist에 서버 전용 문구·서비스 키·소스맵이 없는지 검사 (build 뒤에 실행)
 npx tsx scripts/sample.ts chartRead 2   # 템플릿 id 접두어별 예시 문제 출력
 ```
 
@@ -35,12 +36,29 @@ npx tsx scripts/sample.ts chartRead 2   # 템플릿 id 접두어별 예시 문�
 | --- | --- | --- |
 | `REPORT_TOKEN_SECRET` | 로컬: `.env.local`(커밋 제외) / 배포: Vercel 프로젝트 환경 변수 | 세션 토큰 HMAC 서명 키, 32자 이상. 없으면 `/api/*`가 500 `server_misconfigured`로 실패 |
 
+## 로그인·이용권 (기능 스위치)
+
+`MONETIZATION_ENABLED`(서버)와 `VITE_MONETIZATION_ENABLED`(빌드)가 모두 `"true"`가 아니면 이전과 똑같이 동작합니다.
+꺼진 빌드에는 로그인 코드와 `@supabase/supabase-js`가 들어가지 않고 HTML도 같습니다.
+
+| 구분 | 무료(게스트·이용권 없음) | 이용권 |
+| --- | --- | --- |
+| 진단 | 1회 (브라우저 저장소 표시로 제한) | 반복 |
+| 결과 | 영역별 요약 + 1·2번 해설 | 전체(영역별 상세, 12문항 해설) |
+
+- 로그인: 구글·카카오(Supabase OAuth, PKCE). "이용권 구매"를 누를 때만 요구합니다. 결제는 아직 없고 로그인 뒤 "결제 준비 중"을 보여 줍니다.
+- 서버: `Authorization: Bearer <Supabase 액세스 토큰>`을 Supabase 인증 서버로 검증하고 `entitlements`를 서비스 키로 조회합니다. 토큰 문제 401, 일시 장애 503. 무료 응답은 `server/diagnosis.ts`의 `composeReportResponse`에서 잘라 잠긴 내용이 응답 본문에 들어가지 않습니다. 응답의 `gated`는 스위치가 켜졌을 때만 들어갑니다.
+- DB: `supabase/migrations/`의 SQL을 Supabase SQL Editor에서 실행합니다. 개발용 이용권 수동 부여는 `supabase/dev/grant-entitlement.example.sql`(운영 금지).
+- 안내 문구: HTML의 `<!--#if monetization-->켜짐<!--#else-->꺼짐<!--#endif-->` 블록을 빌드 때 고릅니다.
+- 테스트: `npm run test:gating`(모의 Supabase `scripts/mock-supabase.ts`로 실제 supabase-js 경로 검증)
+
 ## API (Vercel 함수)
 
 | 경로 | 요청 | 응답 |
 | --- | --- | --- |
 | `POST /api/session` | 본문 없음 | `{ token, expiresAt, questions[12] }` — 문항은 `area, areaName, text, figure?, choices[{label, chart?}]`만 |
-| `POST /api/report` | `{ token, answers[12], secs[12] }` | `{ meta, summary, areaDetails, explanations }` |
+| `POST /api/report` | `{ token, answers[12], secs[12] }` (+ 선택: `Authorization`) | `{ meta, summary, areaDetails, explanations }` (+ 스위치 켜짐: `gated`) |
+| `POST /api/account-delete` | `Authorization: Bearer <토큰>` | `{ deleted: true }` — 이용권 행과 Supabase 계정 삭제 |
 
 - 토큰: `base64url({v, s, iat}).base64url(HMAC-SHA256)`, 유효 6시간. 실제 문제 생성 시드는 `HMAC(키, s)`로 만들어 키 없이는 재현할 수 없습니다.
 - 채점은 서버가 토큰의 시드로 같은 문제를 다시 만들어 합니다. 클라이언트가 보낸 점수·정답 여부는 쓰지 않습니다.

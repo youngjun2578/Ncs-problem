@@ -7,6 +7,7 @@
  *  - 틀린 패턴 설명 문구(MISTAKES), 영역 설명, 수준 판정 사유 문구
  *  - 템플릿 id·파일 이름, 서버 모듈 경로
  *  - 실제로 생성한 문항의 해설 문장과 문제 문장
+ *  - 서버 비밀 값: SUPABASE_SERVICE_ROLE_KEY·REPORT_TOKEN_SECRET의 이름과 실제 값, sb_secret_ 키 모양, role=service_role JWT
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
@@ -67,6 +68,37 @@ for (const seed of [1, 2, 3, 12345, 987654321]) {
 }
 // 이름이 '계산 실수'처럼 짧고 흔한 태그는 4자 미만이면 위에서 빠진다
 
+// 서버 전용 비밀 값: 이름, 실제 값(환경 변수·.env.local에 있으면), 값 모양
+for (const m of ['SUPABASE_SERVICE_ROLE_KEY', 'REPORT_TOKEN_SECRET', 'server/accounts', 'setAccountServiceForTests']) add('서버 비밀 값 이름·모듈', m);
+const localEnv = (() => {
+  try {
+    return Object.fromEntries(
+      readFileSync('.env.local', 'utf8')
+        .split('\n')
+        .map((l) => l.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/))
+        .filter((m): m is RegExpMatchArray => !!m)
+        .map((m) => [m[1], m[2]]),
+    ) as Record<string, string>;
+  } catch {
+    return {} as Record<string, string>;
+  }
+})();
+for (const k of ['SUPABASE_SERVICE_ROLE_KEY', 'REPORT_TOKEN_SECRET']) {
+  for (const v of [process.env[k], localEnv[k]]) if (v && v.length >= 8) needles.set(v, `${k} 값`);
+}
+for (const t of texts) {
+  // Supabase 비밀 키 모양(sb_secret_ 뒤에 긴 값). 라이브러리 안의 접두어 검사 문자열('sb_secret_')은 해당 없음
+  if (/sb_secret_[A-Za-z0-9_-]{16,}/.test(t.text)) problems.push(`Supabase 비밀 키 모양의 값 → ${t.file}`);
+  // role이 service_role인 JWT(이전 방식 서비스 키)
+  for (const jwt of t.text.match(/eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g) ?? []) {
+    try {
+      if (JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString()).role === 'service_role') problems.push(`service_role JWT → ${t.file}`);
+    } catch {
+      // JWT가 아님
+    }
+  }
+}
+
 let checked = 0;
 for (const [needle, kind] of needles) {
   checked++;
@@ -82,4 +114,4 @@ if (problems.length) {
   problems.slice(0, 80).forEach((p) => console.error('- ' + p));
   process.exit(1);
 }
-console.log(`번들 검사 통과: dist 파일 ${files.length}개, 검사 문구 ${checked}개, 소스맵 없음 (허용 예외 ${ALLOWED.length}건: ${ALLOWED.map((a) => `${a.file} "${a.needle}"`).join(', ')})`);
+console.log(`번들 검사 통과: ${DIST} 파일 ${files.length}개, 검사 문구 ${checked}개(서비스 키 이름·값·모양 포함), 소스맵 없음 (허용 예외 ${ALLOWED.length}건: ${ALLOWED.map((a) => `${a.file} "${a.needle}"`).join(', ')})`);
