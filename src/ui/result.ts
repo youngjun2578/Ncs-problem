@@ -33,17 +33,6 @@ function summaryTable(r: Report) {
     <tbody>${rows}</tbody></table>`;
 }
 
-function plan(r: Report) {
-  return `<ol class="plan">${r.priority
-    .map((a) => {
-      const first = a.study.slice(0, 2).map((s) => `‘${s.subtype}’`).join(', ');
-      const what =
-        a.level === 'stable' ? `현재 수준 유지. 시간이 날 때 ${first} 복습` : `${first}부터 다시 풀어 보기`;
-      return `<li><span class="plan-area">${a.meta.name}</span> ${levelBadge(a)}<span class="plan-what">${what}</span></li>`;
-    })
-    .join('')}</ol>`;
-}
-
 /** 요약 표에서 영역 이름을 누르면 그 행 아래에 펼쳐지는 상세 */
 function areaDetail(a: AreaReport) {
   const patterns = a.patterns.length
@@ -51,9 +40,6 @@ function areaDetail(a: AreaReport) {
         .map((p) => `<li><span class="pattern-tag">${p.tag}${p.count > 1 ? ` · ${p.count}회` : ''}</span><span class="pattern-text">${p.text}</span></li>`)
         .join('')}</ul>`
     : `<p class="muted">이번 진단에서는 이 영역의 오답이 없어 실수 패턴을 판단할 근거가 없어요.</p>`;
-  const study = `<ol class="study">${a.study
-    .map((s) => `<li><span>${s.subtype}</span><span class="study-reason">${s.reason}</span></li>`)
-    .join('')}</ol>`;
   return `
   <div class="area">
     <p class="area-desc">${a.meta.description}</p>
@@ -65,8 +51,6 @@ function areaDetail(a: AreaReport) {
     <p class="level-reason">${a.levelReason}</p>
     <h3>틀린 패턴</h3>
     ${patterns}
-    <h3>추천 학습 순서</h3>
-    ${study}
   </div>`;
 }
 
@@ -130,14 +114,8 @@ export function renderResult(app: HTMLElement, qs: Problem[], attempts: Attempt[
       ${qs.map((q, i) => itemDetail(q, attempts[i], i)).join('')}
     </section>
 
-    <section aria-labelledby="h-plan">
-      <h2 id="h-plan" class="section-title">추천 학습 순서</h2>
-      <p class="muted">수준이 낮은 영역부터, 같은 수준이면 정답률과 풀이 시간을 기준으로 정렬했어요.</p>
-      ${plan(r)}
-    </section>
-
     <div class="actions no-print">
-      <button type="button" class="btn-primary" id="retry">새 문제로 다시 진단</button>
+      <button type="button" class="btn-primary" id="retry">새 문제로 진단</button>
       <button type="button" class="btn-secondary" id="print">인쇄 / PDF로 저장</button>
     </div>
     <p class="fine">문제는 모두 직접 만든 템플릿에서 생성한 연습용 문제이며, 실제 채용 시험의 출제 범위·난이도와 다를 수 있습니다.</p>

@@ -101,44 +101,6 @@
   height: 9px;
 }
 
-.plan {
-  margin: var(--s3) 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: plan;
-}
-.plan li {
-  counter-increment: plan;
-  display: grid;
-  grid-template-columns: 2em auto 1fr;
-  grid-template-areas: 'no area level' 'no what what';
-  align-items: center;
-  gap: var(--s1) var(--s3);
-  padding: var(--s3) 0;
-  border-bottom: 1px solid var(--rule);
-}
-.plan li::before {
-  content: counter(plan);
-  grid-area: no;
-  align-self: start;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-  font-size: 18px;
-}
-.plan-area {
-  grid-area: area;
-  font-weight: 700;
-}
-.plan .level {
-  grid-area: level;
-}
-.plan-what {
-  grid-area: what;
-  color: var(--ink-2);
-  font-size: 15px;
-}
-
 /* 요약 표의 영역 이름: 누르면 그 행 아래에 상세가 펼쳐진다 */
 .area-toggle {
   display: inline-flex;
@@ -238,22 +200,6 @@
   font-size: 15px;
   color: var(--ink-2);
 }
-.study {
-  margin: 0;
-  padding-left: 1.4em;
-}
-.study li {
-  padding: 2px 0;
-}
-.study li > span:first-child {
-  font-weight: 500;
-}
-.study-reason {
-  margin-left: var(--s2);
-  font-size: 13px;
-  color: var(--muted);
-}
-
 /* 문항별 해설 */
 .item {
   border-bottom: 1px solid var(--rule);

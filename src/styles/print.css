@@ -76,8 +76,7 @@
     border-bottom-color: transparent;
   }
   .kv,
-  .patterns li,
-  .plan li {
+  .patterns li {
     break-inside: avoid;
   }
   .item {
