@@ -52,4 +52,5 @@ export const CLAIMS: { slug: string; text: string; ok: () => boolean }[] = [
   { slug: 'speed-round-trip-average', text: '편도 거리를 120km로 정해 보면, 갈 때는 3시간, 올 때는 2시간', ok: () => 120 / 40 === 3 && 120 / 60 === 2 },
   { slug: 'speed-round-trip-average', text: '왕복 240km를 5시간에 달린 셈이라 평균 속력은 시속 48km', ok: () => 120 * 2 === 240 && 3 + 2 === 5 && 240 / 5 === 48 && (2 * 40 * 60) / (40 + 60) === 48 },
   { slug: 'speed-round-trip-average', text: '가운데 값 50보다 느린 쪽', ok: () => 48 < 50 && 48 - 40 < 60 - 48 },
+  { slug: 'permutation-combination', text: '3 × 2 × 1가지씩', ok: () => 3 * 2 * 1 === 6 },
 ];
