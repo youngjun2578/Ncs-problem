@@ -1,7 +1,8 @@
 /**
  * 심화 문제 샘플 문서(사람이 직접 풀어 보는 용도). build에는 연결하지 않는다.
  *   npx tsx scripts/advanced-samples.ts > docs/advanced-samples.md   문서 출력
- *   npx tsx scripts/advanced-samples.ts --check docs/advanced-samples.md   문서 검사(정답·해설 숫자·문구)
+ *   npx tsx scripts/advanced-samples.ts --check docs/advanced-samples.md   문서 검사(정답·해설 숫자·계산식·문구)
+ *   npx tsx scripts/advanced-samples.ts --self-test   검산기 시험(맞는 식은 통과, 일부러 틀린 식은 잡는지)
  *
  * 문제는 makeProblem(템플릿, new Rng(시드))로 만든다. 시드는 문서에 적어 두므로 같은 문제를 다시 만들 수 있다.
  * 심화 16개 템플릿 × 2문제, 비교용 기본 4개 영역 × 2문제(영역에서 난이도가 가장 높은 기본 유형 2개).
@@ -265,9 +266,10 @@ function particleIssues(text: string): string[] {
 
 const nums = (s: string) => [...s.matchAll(/\d[\d,]*(?:\.\d+)?/g)].map((m) => m[0].replace(/,/g, ''));
 
-/** 사칙연산 식의 값(괄호 짝이 맞고 숫자·연산자만 있을 때). 아니면 null */
+/** 사칙연산 식의 값(괄호 짝이 맞고 숫자·연산자·분수만 있을 때). 아니면 null. 분수 a/b는 한 덩어리 (a/b)로 계산한다 */
 function evalExpr(e: string): number | null {
-  if (!/\d/.test(e) || !/^[\d.\s+−×÷()]+$/.test(e)) return null;
+  e = e.replace(/\u2032/g, '');
+  if (!/\d/.test(e) || !/^[\d.\s+−×÷()/]+$/.test(e)) return null;
   let depth = 0;
   for (const c of e) {
     if (c === '(') depth++;
@@ -275,29 +277,94 @@ function evalExpr(e: string): number | null {
   }
   if (depth !== 0) return null;
   try {
-    const v = Function(`return ${e.replace(/−/g, '-').replace(/×/g, '*').replace(/÷/g, '/')}`)();
+    const js = e
+      .replace(/(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)/g, '($1/$2)')
+      .replace(/−/g, '-')
+      .replace(/×/g, '*')
+      .replace(/÷/g, '/');
+    if (/\/\s*\//.test(js)) return null;
+    const v = Function(`return ${js}`)();
     return typeof v === 'number' && Number.isFinite(v) ? v : null;
   } catch {
     return null;
   }
 }
 
-/** 해설 한 줄의 "식 = 값"(이어진 "= … =" 포함)을 검산한다. 값은 반올림을 감안해 0.05 또는 0.05% 이내면 맞음 */
-function checkArithmetic(line: string): { ok: number; bad: string[] } {
-  const norm = line.replace(/(\d),(?=\d{3}(?!\d))/g, '$1');
+/**
+ * 숫자 뒤에 붙은 단위는 계산에서 빼고 숫자만 남긴다(빠진 자리에 ′ 표시를 남겨 형식을 센다).
+ * 예: "10억 원 ÷ 50천 명 = 0.2 (억 원/천 명)" → "10′ ÷ 50′ = 0.2"
+ */
+const UNIT = /(\d)\s?(?:(?:억|천|만|백만)\s?)?(?:원|명|달러|개|건|점|km|g|분|시간|가지|%)/g;
+function stripUnits(line: string): string {
+  return line.replace(/\s*\((?=[^()\d]*\))[^()]*[가-힣][^()]*\)/g, '').replace(UNIT, '$1\u2032');
+}
+
+/** 검산한 식의 형식: 단위가 붙은 식, 분수(곱) 식, 그 밖의 식 */
+type EqKind = '단위 식' | '분수 식' | '일반 식';
+const kindOf = (seg: string): EqKind => (/\u2032/.test(seg) ? '단위 식' : /\d\/\d/.test(seg) ? '분수 식' : '일반 식');
+
+/**
+ * 해설 한 줄의 "식 = 값"(이어진 "= … =" 포함)을 검산한다.
+ * 소수로 반올림한 값은 0.05 또는 0.05% 이내면 맞음, 분수로 적은 값은 정확히 같아야 맞음.
+ */
+function checkArithmetic(line: string): { ok: number; bad: string[]; kinds: Record<EqKind, number> } {
+  const norm = stripUnits(line.replace(/(\d),(?=\d{3}(?!\d))/g, '$1'));
   let ok = 0;
   const bad: string[] = [];
-  for (const run of norm.match(/[\d.\s+−×÷()=]*=[\d.\s+−×÷()=]*/g) ?? []) {
+  const kinds: Record<EqKind, number> = { '단위 식': 0, '분수 식': 0, '일반 식': 0 };
+  for (const run of norm.match(/[\d.\s+−×÷()/=\u2032]*=[\d.\s+−×÷()/=\u2032]*/g) ?? []) {
     const segs = run.split('=').map((x) => x.trim());
     for (let i = 0; i + 1 < segs.length; i++) {
       const l = evalExpr(segs[i]);
       const r = evalExpr(segs[i + 1]);
-      if (l === null || r === null || !/[+−×÷]/.test(segs[i])) continue;
-      if (Math.abs(l - r) <= Math.max(0.051, Math.abs(r) * 0.0005)) ok++;
-      else bad.push(`${segs[i]} = ${segs[i + 1]} (계산하면 ${l})`);
+      if (l === null || r === null || !/[+−×÷]|\d\/\d/.test(segs[i])) continue;
+      // 분수 하나를 그대로 옮겨 적은 "a/b = a/b"는 계산식이 아니다
+      if (!/[+−×÷]/.test(segs[i]) && segs[i] === segs[i + 1]) continue;
+      const exact = /\d\/\d/.test(segs[i + 1]);
+      const show = (x: string) => x.replace(/\u2032/g, '');
+      if (exact ? Math.abs(l - r) < 1e-9 : Math.abs(l - r) <= Math.max(0.051, Math.abs(r) * 0.0005)) {
+        ok++;
+        kinds[kindOf(segs[i] + segs[i + 1])]++;
+      } else bad.push(`${show(segs[i])} = ${show(segs[i + 1])} (계산하면 ${l})`);
     }
   }
-  return { ok, bad };
+  return { ok, bad, kinds };
+}
+
+/** 검산기 자체 시험: 맞는 식은 통과하고, 일부러 틀린 식은 잡아야 한다 */
+function selfTest() {
+  const good = [
+    '2019년: 10억 원 ÷ 50천 명 = 0.2 (억 원/천 명), 2020년: 18억 원 ÷ 60천 명 = 0.3 (억 원/천 명)',
+    '3/8 × 2/7 × 5/6 = 30/336',
+    '확률 = 3 × 30/336 = 90/336 = 15/56',
+    '1 − 10/56 = 46/56 = 23/28',
+    '정가 = 12,000원 × 160/100 = 19,200원',
+    '증가율 = (172.7 − 110) ÷ 110 × 100 = 57%',
+    '옮긴 뒤 C 지점: 총점 1,215 − 280 = 935점, 인원 15 − 5 = 10명',
+  ];
+  const wrong = [
+    '10억 원 ÷ 50천 명 = 0.3',
+    '3/8 × 2/7 × 5/6 = 31/336',
+    '확률 = 3 × 30/336 = 91/336',
+    '1 − 10/56 = 46/56 = 23/27',
+    '정가 = 12,000원 × 160/100 = 19,300원',
+    '증가율 = (172.7 − 110) ÷ 110 × 100 = 58%',
+    '인원 15 − 5 = 11명',
+  ];
+  const fails: string[] = [];
+  for (const g of good) {
+    const r = checkArithmetic(g);
+    if (r.bad.length || r.ok === 0) fails.push(`맞는 식을 통과시키지 못함: ${g} (맞음 ${r.ok}, 틀림 ${r.bad.join(' / ')})`);
+  }
+  for (const w of wrong) if (checkArithmetic(w).bad.length === 0) fails.push(`틀린 식을 잡지 못함: ${w}`);
+  const none = checkArithmetic('지수는 2018년을 100으로 둔 상댓값이에요.');
+  if (none.ok || none.bad.length) fails.push('식이 없는 줄에서 식을 찾음');
+  console.log(`검산기 시험: 맞는 식 ${good.length}줄, 틀린 식 ${wrong.length}줄`);
+  if (fails.length) {
+    fails.forEach((f) => console.error('FAIL ' + f));
+    process.exit(1);
+  }
+  console.log('검산기 시험 통과');
 }
 
 function check(file: string) {
@@ -307,6 +374,7 @@ function check(file: string) {
   let ansOk = 0;
   let numOk = 0;
   let eqOk = 0;
+  const eqKinds: Record<EqKind, number> = { '단위 식': 0, '분수 식': 0, '일반 식': 0 };
   const numMiss: string[] = [];
   const textIssues: string[] = [];
   for (const sec of sections) {
@@ -327,6 +395,7 @@ function check(file: string) {
     for (const line of sol.split('\n')) {
       const a = checkArithmetic(line);
       eqOk += a.ok;
+      for (const k of Object.keys(eqKinds) as EqKind[]) eqKinds[k] += a.kinds[k];
       a.bad.forEach((b) => fails.push(`${id}: 해설 계산식이 맞지 않음 ${b}`));
     }
     const solNums = new Set(nums(sol));
@@ -347,7 +416,7 @@ function check(file: string) {
   console.log(`문제 ${sections.length}개`);
   console.log(`정답이 보기와 정확히 하나 일치: ${ansOk}/${sections.length}`);
   console.log(`정답 숫자가 해설에 모두 나옴: ${numOk}/${sections.length}`);
-  console.log(`해설 계산식 검산: ${eqOk}개 맞음`);
+  console.log(`해설 계산식 검산: ${eqOk}개 맞음 (${Object.entries(eqKinds).map(([k, v]) => `${k} ${v}`).join(', ')})`);
   numMiss.forEach((m) => console.log('  [해설 숫자] ' + m));
   console.log(`문구 의심 ${textIssues.length}건`);
   textIssues.forEach((m) => console.log('  [문구] ' + m));
@@ -358,5 +427,6 @@ function check(file: string) {
 }
 
 const ci = process.argv.indexOf('--check');
-if (ci >= 0) check(process.argv[ci + 1] ?? 'docs/advanced-samples.md');
+if (process.argv.includes('--self-test')) selfTest();
+else if (ci >= 0) check(process.argv[ci + 1] ?? 'docs/advanced-samples.md');
 else process.stdout.write(render());
