@@ -2,7 +2,7 @@ import type { Template, Generated } from '../../engine/types.js';
 import type { Rng } from '../../engine/rng.js';
 import { num } from '../../engine/format.js';
 import { nearBy } from '../../engine/choices.js';
-import { iGa, eulReul, gwaWa } from '../common.js';
+import { iGa, eulReul, euro, gwaWa } from '../common.js';
 
 const ways = (v: number) => `${num(v)}가지`;
 
@@ -44,7 +44,7 @@ function routes(rng: Rng): Generated {
   const [x, y, z] = rng.pick([['본사', '물류센터', '지점'], ['집', '도서관', '시험장'], ['A 마을', 'B 마을', 'C 마을']]);
   return {
     text: rng.pick([
-      `${x}에서 ${y}까지 가는 길은 ${a}가지, ${y}에서 ${z}까지 가는 길은 ${b}가지이고, ${eulReul(y)} 거치지 않고 ${x}에서 ${z}로 바로 가는 길이 ${c}가지 있다. ${x}에서 ${z}까지 가는 방법은 모두 몇 가지인가? (같은 지점을 두 번 지나지 않는다)`,
+      `${x}에서 ${y}까지 가는 길은 ${a}가지, ${y}에서 ${z}까지 가는 길은 ${b}가지이고, ${eulReul(y)} 거치지 않고 ${x}에서 ${euro(z)} 바로 가는 길이 ${c}가지 있다. ${x}에서 ${z}까지 가는 방법은 모두 몇 가지인가? (같은 지점을 두 번 지나지 않는다)`,
       `${x} → ${y} 경로 ${a}개, ${y} → ${z} 경로 ${b}개, ${x} → ${z} 직행 경로 ${c}개가 있다. ${x}에서 출발해 ${z}에 도착하는 경로는 모두 몇 가지인가? (같은 지점을 두 번 지나지 않는다)`,
     ]),
     answer: ans,

@@ -234,7 +234,7 @@ try {
     const leftovers = off.texts.flatMap(({ f, t }) => (t.replace(LABEL, '').includes('카카오') ? [f] : []));
     ok(leftovers.length === 0, `카카오 꺼짐 빌드: 방식 표시 외 카카오 문구 없음 (${leftovers.join(', ')})`);
     ok(off.texts.every(({ t }) => MARKERS.every((m) => !t.includes(m))), '카카오 꺼짐 빌드: 카카오 버튼·안내 문구 없음');
-    ok(off.texts.some(({ f, t }) => f.endsWith('method/index.html') && t.includes('구글 계정으로 로그인해야')), '카카오 꺼짐 빌드: 안내 페이지는 "구글"만');
+    ok(off.texts.some(({ f, t }) => f.endsWith('privacy/index.html') && t.includes('구글 계정으로 로그인해야')), '카카오 꺼짐 빌드: 개인정보처리방침은 "구글"만');
     const on = await buildWith(true);
     const all = on.texts.map(({ t }) => t).join('\n');
     ok(['카카오로', '구글 또는 카카오', '구글·카카오'].every((m) => all.includes(m)), '(대조) 카카오 켜짐 빌드에는 카카오 버튼·안내 문구가 있음');

@@ -29,6 +29,10 @@ npx tsx scripts/sample.ts chartRead 2   # 템플릿 id 접두어별 예시 문�
 | `VITE_SITE_URL` | canonical·OG·sitemap 절대 주소 (현재 `https://example.com` 자리표시자) |
 | `VITE_CONTACT_EMAIL` | 꼬리말·안내 페이지 문의 이메일 (현재 `contact@example.com` 자리표시자) |
 | `VITE_LAST_UPDATED` | 꼬리말·안내 페이지의 최종 업데이트 날짜, sitemap `lastmod` |
+| `VITE_ADSENSE_ACCOUNT` | 애드센스 사이트 소유권 확인 `<meta name="google-adsense-account">` 값. 형식 `ca-pub-숫자`(틀리면 빌드 실패). Production에만 설정, 비워 두면 태그 없음. 광고 스크립트는 넣지 않음 |
+| `VITE_OPERATOR_NAME` | 개인정보처리방침·소개 페이지의 운영자 이름 (저장소에는 `[운영자 이름]` 자리표시자만, 실제 값은 Vercel 환경 변수) |
+
+Production 빌드(`VERCEL_ENV=production`)는 `npm run check:production`이 결과물에 `example.com`, `[입력`, `[운영자 이름]`, `%VITE_`가 남아 있으면 실패합니다. 로컬·Preview 빌드는 건너뜁니다.
 
 서버 전용 비밀 값은 `.env`에 넣지 않습니다(`.env`는 커밋됨). 목록은 `.env.example`에 있습니다.
 

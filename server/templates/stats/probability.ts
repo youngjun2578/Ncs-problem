@@ -76,7 +76,7 @@ function atLeastOnce(rng: Rng): Generated<Frac> {
       { value: frac(1, 6), mistakeTag: '조건 누락' },
       { value: frac(1, tot), mistakeTag: '전체 경우의 수 오류' },
     ]),
-    steps: [`반대 사건은 "${k}번 모두 ${face}의 눈이 나오지 않는 경우"이에요: (5/6)^${k} = ${5 ** k}/${tot}`, `구하는 확률 = 1 − ${5 ** k}/${tot} = ${fracLabel(ans)}`, `1/6을 ${k}번 더하면(${k}/6) 겹치는 경우를 중복해서 세게 돼요.`],
+    steps: [`반대 사건은 "${k}번 모두 ${face}의 눈이 나오지 않는 경우"예요: (5/6)^${k} = ${5 ** k}/${tot}`, `구하는 확률 = 1 − ${5 ** k}/${tot} = ${fracLabel(ans)}`, `1/6을 ${k}번 더하면(${k}/6) 겹치는 경우를 중복해서 세게 돼요.`],
   };
 }
 

@@ -50,6 +50,8 @@ const needles = new Map<string, string>();
 const add = (kind: string, s: string) => {
   if (s && s.length >= 4) needles.set(s, kind);
 };
+// 광고 스크립트는 아직 넣지 않는다(사이트 소유권 확인 meta만 허용)
+for (const m of ['adsbygoogle', 'googlesyndication']) add('광고 스크립트', m);
 for (const [tag, text] of Object.entries(MISTAKES)) {
   add('실수 유형 이름', tag);
   add('실수 패턴 설명', text);

@@ -2,7 +2,7 @@ import type { Template, Generated } from '../../engine/types.js';
 import type { Rng } from '../../engine/rng.js';
 import { num, won } from '../../engine/format.js';
 import { nearBy } from '../../engine/choices.js';
-import { eulReul, eunNeun, gwaWa } from '../common.js';
+import { eulReul, eunNeun, gwaWa, iRa, ieyo } from '../common.js';
 
 const CTX = [
   { a: '사과', b: '배', unit: '개', buy: '샀더니' },
@@ -44,9 +44,9 @@ function twoItems(rng: Rng): Generated {
     format: (v) => `${num(v)}${c.unit}`,
     near: nearBy(ans, 1),
     steps: [
-      `${eulReul(c.a)} x${c.unit}, ${eulReul(c.b)} y${c.unit}라 하면 x + y = ${n}, ${num(pa)}x + ${num(pb)}y = ${num(T)}`,
+      `${eulReul(c.a)} x${c.unit}, ${eulReul(c.b)} ${iRa(`y${c.unit}`)} 하면 x + y = ${n}, ${num(pa)}x + ${num(pb)}y = ${num(T)}`,
       `(둘째 식) − ${num(pb)} × (첫째 식): ${num(pa - pb)}x = ${num(T - pb * n)} → x = ${x}`,
-      `y = ${n} − ${x} = ${y}이므로 ${eunNeun(target)} ${ans}${c.unit}예요.`,
+      `y = ${n} − ${x} = ${y}이므로 ${eunNeun(target)} ${ieyo(`${ans}${c.unit}`)}.`,
     ],
   };
 }
