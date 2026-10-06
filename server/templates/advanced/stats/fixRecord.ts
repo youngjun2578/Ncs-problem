@@ -3,7 +3,7 @@ import type { Template, Generated } from '../../../engine/types.js';
 import { num } from '../../../engine/format.js';
 import { nearBy } from '../../../engine/choices.js';
 import { search, clean1, r1, distinctWrongs, josaBeforeParen } from '../util.js';
-import { eunNeun, eulReul, euro, iGa, josa } from '../../common.js';
+import { eunNeun, euro, iGa, josa } from '../../common.js';
 
 const median = (xs: number[]) => {
   const s = xs.slice().sort((a, b) => a - b);
@@ -38,9 +38,9 @@ export const fixRecord: Template = {
       });
       const { n, M, x, y, ans, wrongs } = p;
       const text = rng.pick([
-        `${n}개 자료의 ${what} 평균을 ${euro(`${M}${unit}`)} 계산했는데, 그중 ${eulReul(`${y}${unit}`)} ${euro(`${x}${unit}`)} 잘못 기록한 것을 알았다. 바르게 고친 평균은?`,
-        `${what} 자료 ${n}개의 평균이 ${josa(`${M}${unit}`, '이었다', '였다')}. 한 값이 실제로는 ${y}${unit}인데 ${euro(`${x}${unit}`)} 입력되어 있었다면, 고친 뒤의 평균은 얼마인가?`,
-        `잘못 입력된 값 하나(${x}${unit} → 바른 값 ${y}${unit})를 고치기 전 ${n}개 자료의 평균은 ${josa(`${M}${unit}`, '이었다', '였다')}. 고친 뒤 평균을 구하면?`,
+        `${n}개 자료의 ${what} 평균을 ${euro(`${M}${unit}`)} 계산했는데, 실제로는 ${y}${unit}인 한 값을 ${euro(`${x}${unit}`)} 잘못 기록한 사실을 알았다. 바르게 고친 평균은?`,
+        `${what} 자료 ${n}개의 평균이 ${josa(`${M}${unit}`, '이었다', '였다')}. 그런데 실제로는 ${y}${unit}인 한 값을 ${euro(`${x}${unit}`)} 잘못 기록했다면, 고친 뒤의 평균은 얼마인가?`,
+        `${n}개 ${what} 자료의 평균은 ${josa(`${M}${unit}`, '이었다', '였다')}. 나중에 보니 실제로는 ${y}${unit}인 한 값을 ${euro(`${x}${unit}`)} 잘못 기록했었다. 이 값을 바로잡은 뒤 평균을 구하면?`,
       ]);
       return {
         text,
@@ -80,9 +80,9 @@ export const fixRecord: Template = {
     const { n, vals, i, y, ans, wrongs, sorted } = p;
     const list = vals.join(', ');
     const text = rng.pick([
-      `${what} 자료 ${n}개가 ${josaBeforeParen(`${list}(단위: ${unit})`, euro)} 기록되어 있다. 이 가운데 ${i + 1}번째 값 ${eunNeun(String(vals[i]))} ${eulReul(String(y))} 잘못 적은 것이다. 바르게 고친 자료의 중앙값은?`,
-      `다음 ${n}개 ${what} 자료(${list}, 단위: ${unit})에서 ${i + 1}번째 값을 ${euro(String(y))} 바로잡았다. 고친 뒤 중앙값은 얼마인가?`,
-      `${list}(단위: ${unit}). 위 ${what} 자료의 ${i + 1}번째 값 ${iGa(String(vals[i]))} 사실은 ${y}${unit}이다. 수정한 자료의 중앙값을 구하면?`,
+      `${what} 자료 ${n}개가 ${josaBeforeParen(`${list}(단위: ${unit})`, euro)} 기록되어 있다. 이 가운데 ${i + 1}번째 값 ${eunNeun(`${vals[i]}${unit}`)} 실제로는 ${y}${unit}인 값을 잘못 기록한 것이다. 바르게 고친 자료의 중앙값은?`,
+      `다음 ${n}개 ${what} 자료(${list}, 단위: ${unit})에서 ${i + 1}번째 값 ${eunNeun(`${vals[i]}${unit}`)} 실제로는 ${y}${unit}인 값을 잘못 기록한 것이다. 이 값을 바로잡은 뒤 중앙값은 얼마인가?`,
+      `${list}(단위: ${unit}). 위 ${what} 자료의 ${i + 1}번째 값은 실제로는 ${y}${unit}인데 ${euro(`${vals[i]}${unit}`)} 잘못 기록되었다. 수정한 자료의 중앙값을 구하면?`,
     ]);
     return {
       text,

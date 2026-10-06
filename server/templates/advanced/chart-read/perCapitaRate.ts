@@ -6,6 +6,8 @@ import { catNames } from '../../chart-read/data.js';
 import { search, r1, distinctWrongs } from '../util.js';
 
 const RATES = [5, 10, 20, 25, 40, 50];
+/** 표의 인구 단위. 해설의 1인당 금액 단위(총액 단위/인구 단위)에도 쓴다 */
+const POP_UNIT = '천 명';
 const POP_RATES = [-10, -5, 5, 10, 20, 25];
 const WHAT = [
   { what: '복지 예산', unit: '억 원' },
@@ -58,7 +60,7 @@ export const perCapitaRate: Template = {
         kind: 'table',
         table: {
           caption: `지역별 인구와 ${w.what}`,
-          unit: `인구: 천 명, ${w.what}: ${w.unit}`,
+          unit: `인구: ${POP_UNIT}, ${w.what}: ${w.unit}`,
           head: ['지역', `${y1}년 인구`, `${y1}년 ${w.what}`, `${y2}년 인구`, `${y2}년 ${w.what}`],
           rows: names.map((n, i) => [n, rows[i].pop1, rows[i].t1, rows[i].pop2, rows[i].t2]),
         },
@@ -67,7 +69,7 @@ export const perCapitaRate: Template = {
       near: nearBy(ans, 1),
       steps: [
         `1인당 금액 = ${w.what} ÷ 인구`,
-        `${y1}년: ${num(x.t1)} ÷ ${num(x.pop1)} = ${num(x.t1 / x.pop1)}, ${y2}년: ${num(x.t2)} ÷ ${num(x.pop2)} = ${num(x.t2 / x.pop2)}`,
+        `${y1}년: ${num(x.t1)}${w.unit} ÷ ${num(x.pop1)}${POP_UNIT} = ${num(x.t1 / x.pop1)} (${w.unit}/${POP_UNIT}), ${y2}년: ${num(x.t2)}${w.unit} ÷ ${num(x.pop2)}${POP_UNIT} = ${num(x.t2 / x.pop2)} (${w.unit}/${POP_UNIT})`,
         `증가율 = (${num(x.t2 / x.pop2)} − ${num(x.t1 / x.pop1)}) ÷ ${num(x.t1 / x.pop1)} × 100 = ${num(ans)}%`,
         `${w.what} 전체의 증가율과 1인당 증가율은 인구가 바뀌면 달라요.`,
       ],

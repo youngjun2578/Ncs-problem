@@ -1,7 +1,7 @@
 /** 심화(기존 확장): 되돌려 놓지 않고 세 번 꺼낼 때 "정확히 2개" / "적어도 1개" 확률 */
 import type { Template, Generated } from '../../../engine/types.js';
 import { frac, fracLabel, isProb, C, type Frac } from '../../../engine/frac.js';
-import { search } from '../util.js';
+import { search, fracSteps } from '../util.js';
 import { iGa, eulReul } from '../../common.js';
 
 export const drawThree: Template<Frac> = {
@@ -38,29 +38,44 @@ export const drawThree: Template<Frac> = {
     });
     const { a, b, n, ans, wrongs } = p;
     const ask = exactTwo ? `${c1} ${iGa(obj)} 정확히 2개일 확률은?` : `${c1} ${iGa(obj)} 적어도 1개 나올 확률은?`;
-    const text = rng.pick([
-      `${c1} ${obj} ${a}개와 ${c2} ${obj} ${b}개가 들어 있는 상자에서 ${eulReul(obj)} 하나씩 3번 꺼낸다. 꺼낸 것은 되돌려 놓지 않을 때, ${ask}`,
-      `${c1} ${obj} ${a}개, ${c2} ${obj} ${b}개 중에서 동시에 3개를 꺼낼 때, ${ask}`,
-      `상자에 ${c1} ${obj} ${a}개와 ${c2} ${obj} ${b}개가 섞여 있다. 한 번에 3개를 고를 때 ${ask}`,
+    // 문장마다 꺼내는 방식이 다르다: 하나씩 차례로(순서 있음) / 동시에·한 번에(조합)
+    const { text, sequential } = rng.pick([
+      { text: `${c1} ${obj} ${a}개와 ${c2} ${obj} ${b}개가 들어 있는 상자에서 ${eulReul(obj)} 하나씩 3번 꺼낸다. 꺼낸 것은 되돌려 놓지 않을 때, ${ask}`, sequential: true },
+      { text: `${c1} ${obj} ${a}개, ${c2} ${obj} ${b}개 중에서 동시에 3개를 꺼낼 때, ${ask}`, sequential: false },
+      { text: `상자에 ${c1} ${obj} ${a}개와 ${c2} ${obj} ${b}개가 섞여 있다. 한 번에 3개를 고를 때 ${ask}`, sequential: false },
     ]);
     const all = C(n, 3);
-    return {
-      text,
-      answer: ans,
-      wrongs,
-      format: fracLabel,
-      steps: exactTwo
+    const seqAll = n * (n - 1) * (n - 2);
+    const steps = sequential
+      ? exactTwo
+        ? [
+            `${c1} 2개와 ${c2} 1개가 나오는 순서 하나(${c1} → ${c1} → ${c2})의 확률: ${a}/${n} × ${a - 1}/${n - 1} × ${b}/${n - 2} = ${a * (a - 1) * b}/${seqAll}`,
+            `${c2} ${iGa(obj)} 첫째·둘째·셋째 중 언제 나와도 확률이 같으므로, 순서는 3가지예요.`,
+            `확률 = 3 × ${a * (a - 1) * b}/${seqAll} = ${fracSteps(3 * a * (a - 1) * b, seqAll)}`,
+            `하나씩 차례로 꺼낼 때는 순서가 다른 세 경우를 모두 더해야 해요. 한 가지 순서만 계산하면 나머지 두 경우를 빠뜨려요.`,
+          ]
+        : [
+            `반대 경우(${c1} ${obj} 0개 = 세 번 모두 ${c2}): ${b}/${n} × ${b - 1}/${n - 1} × ${b - 2}/${n - 2} = ${fracSteps(b * (b - 1) * (b - 2), seqAll)}`,
+            `확률 = 1 − ${fracLabel(frac(b * (b - 1) * (b - 2), seqAll))} = ${fracLabel(ans)}`,
+          ]
+      : exactTwo
         ? [
             `전체: ${n}개 중 3개 = ${n}C3 = ${all}`,
             `${c1} 2개와 ${c2} 1개: ${a}C2 × ${b}C1 = ${C(a, 2)} × ${b} = ${C(a, 2) * b}`,
-            `확률 = ${C(a, 2) * b}/${all} = ${fracLabel(ans)}`,
-            `한 가지 순서만 계산하면 순서가 다른 세 경우를 빠뜨려요.`,
+            `확률 = ${fracSteps(C(a, 2) * b, all)}`,
+            `동시에 꺼내므로 조합으로 세면 되고, 꺼낸 순서를 따로 나눠 셀 필요가 없어요.`,
           ]
         : [
             `반대 경우(${c1} ${obj} 0개 = 모두 ${c2}): ${b}C3 = ${C(b, 3)}`,
             `전체: ${n}C3 = ${all}`,
             `확률 = 1 − ${C(b, 3)}/${all} = ${fracLabel(ans)}`,
-          ],
+          ];
+    return {
+      text,
+      answer: ans,
+      wrongs,
+      format: fracLabel,
+      steps,
     };
   },
 };

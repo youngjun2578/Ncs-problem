@@ -4,6 +4,7 @@
 import type { Rng } from '../../engine/rng.js';
 import type { Wrong } from '../../engine/types.js';
 import { round } from '../../engine/format.js';
+import { frac, fracLabel } from '../../engine/frac.js';
 
 /** 조건을 만족하는 값을 찾을 때까지 다시 뽑는다. 못 찾으면 예외(세트 생성기가 다른 문제로 다시 뽑는다). */
 export function search<T>(rng: Rng, tries: number, make: (rng: Rng) => T | null): T {
@@ -43,6 +44,14 @@ export function distinctWrongs(answer: number, wrongs: Wrong<number>[], need = 4
 export function josaBeforeParen(word: string, withJosa: (w: string) => string): string {
   const head = word.replace(/\(.*\)$/, '');
   return word + withJosa(head).slice(head.length);
+}
+
+/**
+ * 해설용 분수 표시: 약분되면 "18/42 = 3/7", 이미 기약분수면 "15/56"만(같은 식을 되풀이하지 않는다).
+ */
+export function fracSteps(n: number, d: number): string {
+  const reduced = fracLabel(frac(n, d));
+  return reduced === `${n}/${d}` ? reduced : `${n}/${d} = ${reduced}`;
 }
 
 /** 표에 넣을 증감률 문자열: 음수 기호는 유니코드 빼기(−)를 쓴다 */
