@@ -3,7 +3,7 @@ import type { Rng } from '../../engine/rng.js';
 import { num } from '../../engine/format.js';
 import { nearBy } from '../../engine/choices.js';
 import { C, P, fact } from '../../engine/frac.js';
-import { eulReul, gwaWa, iGa } from '../common.js';
+import { eulReul, euro, gwaWa, iGa } from '../common.js';
 
 const ways = (v: number) => `${num(v)}가지`;
 
@@ -80,7 +80,7 @@ function round_(rng: Rng): Generated {
     ],
     format: ways,
     near: nearBy(ans, 2),
-    steps: [`한 줄로 세우는 방법은 ${n}! = ${fact(n)}가지`, `원형에서는 회전해서 같은 배치가 ${n}개씩 있으므로 ${n}으로 나눠요.`, `${fact(n)} ÷ ${n} = (${n} − 1)! = ${ans}가지`],
+    steps: [`한 줄로 세우는 방법은 ${n}! = ${fact(n)}가지`, `원형에서는 회전해서 같은 배치가 ${n}개씩 있으므로 ${euro(String(n))} 나눠요.`, `${fact(n)} ÷ ${n} = (${n} − 1)! = ${ans}가지`],
   };
 }
 

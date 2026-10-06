@@ -34,7 +34,7 @@ function avgRound(rng: Rng): Generated {
     near: nearBy(ans, hiking ? 0.5 : 2),
     steps: [
       `편도 거리를 d라 하면 왕복 거리는 2d예요.`,
-      `걸린 시간은 d/${num(v1)} + d/${num(v2)}이에요.`,
+      `걸린 시간은 d/${num(v1)} + d/${num(v2)}예요.`,
       `평균 속력 = 2d ÷ (d/${num(v1)} + d/${num(v2)}) = 2×${num(v1)}×${num(v2)} ÷ (${num(v1)}+${num(v2)}) = 시속 ${num(ans)}km`,
       `두 속력의 단순 평균(시속 ${num((v1 + v2) / 2)}km)은 함정이에요. 느린 구간에서 더 오래 머물기 때문이에요.`,
     ],

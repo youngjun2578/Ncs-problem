@@ -1,6 +1,7 @@
 import type { Template, Generated } from '../../engine/types.js';
 import { num, round } from '../../engine/format.js';
 import { nearBy } from '../../engine/choices.js';
+import { iGa, ieyo } from '../common.js';
 
 const CTX = [
   { lead: (n: number, l: string) => `직원 ${n}명의 통근 시간을 조사했더니 각각 ${l}분이었다.`, unit: '분', lo: 15, hi: 80 },
@@ -66,9 +67,9 @@ export const median: Template = {
       steps: [
         `크기순으로 정렬: ${sorted.join(', ')}`,
         n % 2
-          ? `자료가 ${n}개(홀수)이므로 ${(n + 1) / 2}번째 값 ${num(med)}${ctx.unit}이 중앙값이에요.`
+          ? `자료가 ${n}개(홀수)이므로 ${(n + 1) / 2}번째 값 ${iGa(`${num(med)}${ctx.unit}`)} 중앙값이에요.`
           : `자료가 ${n}개(짝수)이므로 ${m}번째와 ${m + 1}번째 값의 평균: (${sorted[m - 1]} + ${sorted[m]}) ÷ 2 = ${num(med)}${ctx.unit}`,
-        `참고로 평균은 ${num(mean)}${ctx.unit}, 가장 자주 나온 값(최빈값)은 ${mode}${ctx.unit}이에요.`,
+        `참고로 평균은 ${num(mean)}${ctx.unit}, 가장 자주 나온 값(최빈값)은 ${ieyo(`${mode}${ctx.unit}`)}.`,
       ],
     };
   },

@@ -2,6 +2,7 @@ import type { Template, Generated } from '../../engine/types.js';
 import type { Rng } from '../../engine/rng.js';
 import { num, won } from '../../engine/format.js';
 import { nearBy } from '../../engine/choices.js';
+import { ieyo } from '../common.js';
 
 /** 원가 c, 이익률 p%, 할인율 d% — 정가·판매가가 원 단위로 떨어지는 조합 */
 function pickDeal(rng: Rng) {
@@ -85,7 +86,7 @@ function profitRate(rng: Rng): Generated {
     format: (v) => `${num(v)}%`,
     near: nearBy(ans, 1),
     steps: [
-      `원가를 100이라 하면 정가는 ${100 + p}예요.`,
+      `원가를 100이라 하면 정가는 ${ieyo(String(100 + p))}.`,
       `판매가 = ${100 + p} × (1 − ${d}/100) = ${num(ans + 100)}`,
       `이익률 = (${num(ans + 100)} − 100) ÷ 100 × 100 = ${num(ans)}%`,
     ],

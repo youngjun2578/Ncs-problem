@@ -2,7 +2,7 @@ import type { Template, Generated } from '../../engine/types.js';
 import type { Rng } from '../../engine/rng.js';
 import { num } from '../../engine/format.js';
 import { nearBy } from '../../engine/choices.js';
-import { pair, eunNeun } from '../common.js';
+import { pair, eunNeun, ieyo } from '../common.js';
 
 const PAIRS = [[6, 12], [10, 15], [12, 24], [20, 30], [15, 30], [30, 60], [9, 18], [8, 24], [14, 35], [10, 40], [18, 36], [12, 36]];
 
@@ -30,7 +30,7 @@ function together(rng: Rng): Generated {
     format: (x) => `${num(x)}${unit}`,
     near: nearBy(ans, 1),
     steps: [
-      `전체 일의 양을 1이라 하면, 단위 시간에 하는 일은 1/${a} + 1/${b} = ${a + b}/${a * b}예요.`,
+      `전체 일의 양을 1이라 하면, 단위 시간에 하는 일은 1/${a} + 1/${b} = ${ieyo(`${a + b}/${a * b}`)}.`,
       `걸리는 ${unit === '일' ? '날' : '시간'} = 1 ÷ ${a + b}/${a * b} = ${a * b} ÷ ${a + b} = ${num(ans)}${unit}`,
       `일수를 더하거나 평균 내면 안 돼요. 더할 수 있는 것은 하루(한 시간) 동안 하는 일의 양이에요.`,
     ],

@@ -16,6 +16,7 @@ import { Rng } from '../server/engine/rng.js';
 import { makeProblem } from '../server/engine/set.js';
 import type { Problem } from '../server/engine/types.js';
 import type { ChartSpec, Figure } from '../shared/charts/types.js';
+import { eulReul, eunNeun, euro, gwaWa, iGa, iRa, ieyo } from '../server/templates/common.js';
 
 type Final = 'none' | 'rieul' | 'other';
 
@@ -260,7 +261,28 @@ function selfTest() {
     ['10000', 'other'], ['11', 'rieul'], ['2.5', 'none'], ['13', 'other'],
   ];
   for (const [n, f] of nf) if (numberFinal(n) !== f) fails.push(`숫자 끝소리 ${n}: ${numberFinal(n)} (기대 ${f})`);
-  console.log(`검사기 시험: 틀린 문장 ${wrong.length}개 중 ${counts.filter((c) => c > 0).length}개 잡음, 맞는 문장 ${right.length}개 통과 확인, 숫자 끝소리 ${nf.length}개`);
+  // 템플릿이 쓰는 조사 도우미(server/templates/common.ts) 단위 시험
+  const helper: [string, string][] = [
+    // (으)로: 삼·육·영·십·백·천·만은 "으로", 일·칠·팔(ㄹ)과 이·사·오·구는 "로"
+    [euro('3'), '3으로'], [euro('6'), '6으로'], [euro('0'), '0으로'], [euro('10'), '10으로'], [euro('20'), '20으로'],
+    [euro('100'), '100으로'], [euro('1,000'), '1,000으로'], [euro('10000'), '10000으로'], [euro('40'), '40으로'],
+    [euro('1'), '1로'], [euro('7'), '7로'], [euro('8'), '8로'], [euro('2'), '2로'], [euro('4'), '4로'], [euro('5'), '5로'], [euro('9'), '9로'],
+    [euro('2.5'), '2.5로'], [euro('지점'), '지점으로'], [euro('시험장'), '시험장으로'], [euro('회사'), '회사로'], [euro('서울'), '서울로'],
+    [euro('L'), 'L로'], [euro('M'), 'M으로'],
+    // 을/를, 은/는, 이/가, 과/와
+    [eulReul('3'), '3을'], [eulReul('2'), '2를'], [eulReul('7'), '7을'], [eunNeun('10'), '10은'], [eunNeun('4'), '4는'],
+    [iGa('32개'), '32개가'], [iGa('32건'), '32건이'], [iGa('5'), '5가'], [iGa('8'), '8이'], [gwaWa('6'), '6과'], [gwaWa('9'), '9와'],
+    [eulReul('A'), 'A를'], [eunNeun('B'), 'B는'], [gwaWa('A 사원'), 'A 사원과'],
+    // 분수는 분자로: 3/8 = 팔분의 삼
+    [iGa('3/8'), '3/8이'], [iGa('1/2'), '1/2이'], [eulReul('5/36'), '5/36를'], [ieyo('18/72'), '18/72이에요'], [ieyo('d/30'), 'd/30예요'],
+    // (이)라, 이에요/예요
+    [iRa('y장'), 'y장이라'], [iRa('y건'), 'y건이라'], [iRa('y개'), 'y개라'], [iRa('y자루'), 'y자루라'], [iRa('1'), '1이라'],
+    [ieyo('8장'), '8장이에요'], [ieyo('18개'), '18개예요'], [ieyo('130'), '130이에요'], [ieyo('125'), '125예요'], [ieyo('90/1800'), '90/1800이에요'],
+  ];
+  for (const [got, exp] of helper) if (got !== exp) fails.push(`조사 도우미: ${got} (기대 ${exp})`);
+  // 도우미 결과를 검사기도 맞다고 보는가
+  for (const [, exp] of helper) if (scanText(exp).some((f) => f.kind === 'error')) fails.push(`검사기와 도우미가 다르게 판단: ${exp}`);
+  console.log(`검사기 시험: 틀린 문장 ${wrong.length}개 중 ${counts.filter((c) => c > 0).length}개 잡음, 맞는 문장 ${right.length}개 통과 확인, 숫자 끝소리 ${nf.length}개, 조사 도우미 ${helper.length}개`);
   if (fails.length) {
     fails.forEach((f) => console.error('FAIL ' + f));
     process.exit(1);
