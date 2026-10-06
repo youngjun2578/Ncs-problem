@@ -25,6 +25,12 @@ const PROVIDER_LABEL: Record<string, string> = { google: '구글', kakao: '카�
 const KAKAO_LOGIN = import.meta.env.VITE_KAKAO_LOGIN_ENABLED === 'true';
 const PROVIDERS_TEXT = import.meta.env.VITE_KAKAO_LOGIN_ENABLED === 'true' ? '구글 또는 카카오' : '구글';
 const FREE_KEY = 'ncs-free-diagnosis-used';
+/**
+ * 결제 화면(VITE_PAYMENTS_ENABLED=true 빌드에서만). 꺼진 빌드에서는 pay가 null이고 결제 분기는 모두 빠진다.
+ * 조건을 import 자리에 직접 써야 꺼진 빌드에서 번들러가 payments 모듈을 통째로 지운다.
+ */
+type Pay = typeof import('./payments');
+const pay: Promise<Pay> | null = import.meta.env.VITE_PAYMENTS_ENABLED === 'true' ? import('./payments') : null;
 const PRICE = `${PASS_PRICE_KRW.toLocaleString('ko-KR')}원`;
 
 export interface AccountState {
@@ -364,6 +370,7 @@ export async function purchase() {
   if (state.status === 'unconfigured') return notice('이용권 구매', '이용권 기능을 준비하고 있습니다.');
   if (state.status !== 'member') return chooseAndSignIn('/diagnosis/?auth=purchase', 'purchase');
   if (state.entitlement === 'active') return notice('이미 이용권이 있습니다', '새 문제로 진단, 전 문항 해설, 영역별 상세를 이용할 수 있습니다.');
+  if (pay) return (await pay).checkout({ accessToken, recheck: recheckEntitlement, openModal, notice });
   return notice('결제는 준비 중입니다', `${PROVIDER_LABEL[state.provider ?? ''] ?? ''} 계정으로 로그인되어 있습니다. ${PRICE} 이용권 결제가 열리면 이 계정으로 구매할 수 있습니다.`.trim());
 }
 
@@ -389,14 +396,19 @@ export function renderPaywall(app: HTMLElement, mode: 'free-used' | 'purchase', 
     if (s.loginError) status = s.loginError;
     else if (s.status === 'loading' || (s.status === 'member' && s.entitlement === 'unknown')) status = '로그인 상태를 확인하고 있습니다…';
     else if (s.status === 'unconfigured') status = '이용권 기능을 준비하고 있습니다.';
-    else if (s.status === 'guest') status = `이용권을 구매하려면 ${PROVIDERS_TEXT}로 로그인하세요.`;
+    else if (s.status === 'guest') {
+      status = `이용권을 구매하려면 ${PROVIDERS_TEXT}로 로그인하세요.`;
+      // 결제가 열린 빌드: 무료 1회를 쓴 뒤에도 로그인 → 구매로 이어지게 한다
+      if (pay) primary = '<button type="button" class="btn-primary" data-act="buy">로그인하고 이용권 구매</button>';
+    }
     else if (s.entitlement === 'active') {
       status = '이용권이 확인되었습니다.';
       primary = '<button type="button" class="btn-primary" data-act="start">새 문제로 진단</button>';
     } else if (s.entitlement === 'error') {
       status = '이용권 상태를 확인하지 못했습니다.';
       primary = '<button type="button" class="btn-primary" data-act="recheck">다시 시도</button>';
-    } else status = `${PROVIDER_LABEL[s.provider ?? ''] ?? ''} 계정으로 로그인되어 있습니다. 결제는 준비 중입니다.`.trim();
+    } else if (pay) status = `${PROVIDER_LABEL[s.provider ?? ''] ?? ''} 계정으로 로그인되어 있습니다. 이용권을 구매하면 바로 새 문제로 진단할 수 있습니다.`.trim();
+    else status = `${PROVIDER_LABEL[s.provider ?? ''] ?? ''} 계정으로 로그인되어 있습니다. 결제는 준비 중입니다.`.trim();
 
     const showCard = !(s.status === 'member' && s.entitlement === 'active');
     app.innerHTML = `
@@ -416,6 +428,7 @@ export function renderPaywall(app: HTMLElement, mode: 'free-used' | 'purchase', 
       actions.start();
     });
     app.querySelector<HTMLButtonElement>('[data-act="recheck"]')?.addEventListener('click', () => void recheckEntitlement());
+    if (pay) app.querySelector<HTMLButtonElement>('[data-act="buy"]')?.addEventListener('click', () => void purchase());
     app.querySelectorAll<HTMLButtonElement>('[data-pass-buy]').forEach((b) => b.addEventListener('click', () => void purchase()));
   };
   const off = onChange(draw);

@@ -1,0 +1,47 @@
+/*
+ * 결제 진행 화면(시험 결제 표시 포함).
+ * payments.ts에서만 불러오므로 결제 스위치(VITE_PAYMENTS_ENABLED)가 꺼진 빌드에는 들어가지 않는다.
+ */
+
+/* 결제가 열린 빌드에서는 이용권 카드의 "결제 준비 중" 표시를 숨긴다 */
+.pass-status {
+  display: none;
+}
+
+.pay-test {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 var(--s2);
+  margin-bottom: var(--s2);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+.pay-summary {
+  margin: var(--s3) 0;
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+}
+.pay-summary dt {
+  font-size: 13px;
+  color: var(--muted);
+}
+.pay-summary dd {
+  margin: 0 0 var(--s2);
+  font-weight: 600;
+}
+.pay-actions {
+  display: grid;
+  gap: var(--s2);
+  margin-top: var(--s4);
+}
+.pay-status {
+  margin: var(--s3) 0 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
