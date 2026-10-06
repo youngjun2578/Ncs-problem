@@ -1,6 +1,6 @@
 /**
  * 심화 리포트용 영역 메타: 이름·설명은 기본과 같고, 권장 시간과 학습 순서만 심화용이다.
- * 권장 시간 숫자는 constants.ts([가정])에서만 바꾼다.
+ * 권장 시간 숫자는 constants.ts([사용자 결정 10/6: 심화 1문항 90초])에서만 바꾼다.
  */
 import { AREAS, type AreaMeta } from '../areas.js';
 import { ADVANCED_TEMPLATES } from './registry.js';
