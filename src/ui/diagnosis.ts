@@ -55,6 +55,13 @@ type Mon = typeof import('./monetization');
 const mon: Promise<Mon> | null = import.meta.env.VITE_MONETIZATION_ENABLED === 'true' ? import('./monetization') : null;
 if (mon) void mon.then((m) => m.mountHeader());
 
+/*
+ * 심화 진단 화면(스위치가 켜진 빌드에서만). 꺼진 빌드에서는 adv가 null이고 아래 분기는 모두 건너뛴다.
+ * 이용권 기능과 같은 방식으로, 조건을 import 자리에 직접 써서 꺼진 빌드에서 advanced 모듈을 통째로 지운다.
+ */
+type Adv = typeof import('./advanced');
+const adv: Promise<Adv> | null = import.meta.env.VITE_ADVANCED_LEVEL_ENABLED === 'true' ? import('./advanced') : null;
+
 const RESULT_LEAVE_WARNING = '로그인 화면으로 이동하면 지금 보고 있는 결과는 사라집니다. 필요하면 먼저 인쇄 / PDF로 저장하세요.';
 const ANSWERS_LEAVE_WARNING = '로그인 화면으로 이동하면 지금 푼 답은 사라집니다.';
 
@@ -81,9 +88,13 @@ async function start() {
   showStatus('문제를 준비하고 있습니다…');
   let session;
   try {
-    session = await startSession();
+    session = await (adv ? (await adv).requestSession() : startSession());
   } catch (e) {
     if (my !== generation) return;
+    if (adv && e instanceof ApiFailure && e.code === 'level_unavailable') {
+      (await adv).renderUnavailable(app, { basic: start, home: goHome });
+      return;
+    }
     showError('문제를 불러오지 못했습니다', e instanceof ApiFailure ? e.message : '알 수 없는 오류가 났습니다.', [
       { label: '다시 시도', primary: true, run: start },
       { label: '홈으로', run: goHome },
@@ -115,6 +126,11 @@ async function submit(my: number, token: string, answers: number[], secs: number
   } catch (e) {
     if (my !== generation) return;
     const f = e instanceof ApiFailure ? e : new ApiFailure('알 수 없는 오류가 났습니다.', null);
+    if (adv && f.code === 'level_unavailable') {
+      // 풀이 중에 서버가 심화를 닫은 경우: 이 답은 채점할 수 없으므로 준비 중 안내로 바꾼다
+      (await adv).renderUnavailable(app, { basic: start, home: goHome });
+      return;
+    }
     if (m && f.code === 'auth_invalid') {
       // 로그인 토큰이 거부됨: 한 번 갱신해서 다시 보내 보고, 그래도 안 되면 다시 로그인하거나 무료 결과로 볼 수 있게 한다
       if (!opts.retried && (await m.refreshToken())) return submit(my, token, answers, secs, { retried: true });
@@ -142,6 +158,7 @@ async function submit(my: number, token: string, answers: number[], secs: number
   }
   if (my !== generation) return;
   renderResult(app, res, start);
+  if (adv) (await adv).decorateResult(app, res, start);
   if (m) {
     // 채점 결과를 정상적으로 받은 시점에 무료 진단 사용 표시를 남긴다(이 브라우저에만)
     m.markFreeUsed();

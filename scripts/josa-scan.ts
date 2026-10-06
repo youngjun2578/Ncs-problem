@@ -2,6 +2,8 @@
  * 기본 템플릿 조사 점검(개발용). build에는 연결하지 않는다.
  *   npx tsx scripts/josa-scan.ts              템플릿마다 시드 3,000개로 문제를 만들어 조사 의심 지점을 찾는다(오류가 있으면 exit 1)
  *   npx tsx scripts/josa-scan.ts --seeds 500  시드 수 바꾸기
+ *   npx tsx scripts/josa-scan.ts --advanced   심화 템플릿(server/advanced/registry.ts)을 점검
+ *   npx tsx scripts/josa-scan.ts --all        기본과 심화를 모두 점검
  *   npx tsx scripts/josa-scan.ts --self-test  검사기 자체 시험
  *
  * 숫자·영문자·괄호·따옴표·한글 단위 뒤에 붙은 조사(을/를, 은/는, 이/가, 과/와, (으)로, (이)라, (이)나, 이에요/예요)를 본다.
@@ -12,9 +14,10 @@
  *   판단 불가: 읽는 소리를 규칙으로 정할 수 없는 앞말(모르는 영문 약어, 기호 등)
  */
 import { TEMPLATES } from '../server/registry.js';
+import { ADVANCED_TEMPLATES } from '../server/advanced/registry.js';
 import { Rng } from '../server/engine/rng.js';
 import { makeProblem } from '../server/engine/set.js';
-import type { Problem } from '../server/engine/types.js';
+import type { Problem, Template } from '../server/engine/types.js';
 import type { ChartSpec, Figure } from '../shared/charts/types.js';
 import { eulReul, eunNeun, euro, gwaWa, iGa, iRa, ieyo } from '../server/templates/common.js';
 
@@ -191,11 +194,11 @@ export function problemStrings(p: Problem): { where: string; s: string }[] {
 /** 묶는 열쇠: 한글 단위가 끝소리를 정하면 숫자를 N으로, 숫자가 정하면 끝자리만 남긴다(…3으로) */
 const keyWord = (f: Finding) => (f.basis.startsWith('한글') ? f.word.replace(/\d[\d,.]*/g, 'N') : f.word.replace(/\d[\d,.]*(?=\d)/g, '…'));
 
-function scanTemplates(seeds: number) {
+function scanTemplates(templates: Template[], seeds: number) {
   const byTpl = new Map<string, Map<string, { kind: Kind; key: string; basis: string; count: number; example: string }>>();
   let problems = 0;
   let failed = 0;
-  for (const tpl of TEMPLATES) {
+  for (const tpl of templates) {
     const agg = new Map<string, { kind: Kind; key: string; basis: string; count: number; example: string }>();
     byTpl.set(tpl.id, agg);
     for (let seed = 0; seed < seeds; seed++) {
@@ -295,8 +298,10 @@ if (process.argv.includes('--self-test')) selfTest();
 else {
   const si = process.argv.indexOf('--seeds');
   const seeds = si >= 0 ? Number(process.argv[si + 1]) : 3000;
+  // 기본값은 기본 템플릿만(main과 같음). --advanced는 심화만, --all은 둘 다
+  const templates = process.argv.includes('--all') ? [...TEMPLATES, ...ADVANCED_TEMPLATES] : process.argv.includes('--advanced') ? ADVANCED_TEMPLATES : TEMPLATES;
   const t0 = Date.now();
-  const { byTpl, problems, failed } = scanTemplates(seeds);
+  const { byTpl, problems, failed } = scanTemplates(templates, seeds);
   const total: Record<Kind, number> = { error: 0, fp: 0, unknown: 0 };
   for (const [id, agg] of byTpl) {
     const items = [...agg.values()].sort((a, b) => a.kind.localeCompare(b.kind) || b.count - a.count);
@@ -313,7 +318,7 @@ else {
     }
   }
   console.log(
-    `\n템플릿 ${TEMPLATES.length}개 × 시드 ${seeds}개: 문제 ${problems}개(생성 실패 ${failed}), 오류 ${total.error}건, 판단 불가 ${total.unknown}건, 오탐 ${total.fp}건, ${((Date.now() - t0) / 1000).toFixed(1)}초`,
+    `\n템플릿 ${templates.length}개 × 시드 ${seeds}개: 문제 ${problems}개(생성 실패 ${failed}), 오류 ${total.error}건, 판단 불가 ${total.unknown}건, 오탐 ${total.fp}건, ${((Date.now() - t0) / 1000).toFixed(1)}초`,
   );
   if (total.error) process.exit(1);
 }

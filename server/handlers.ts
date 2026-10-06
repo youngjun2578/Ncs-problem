@@ -9,6 +9,7 @@ import { ConfigError, generationSeed, issueToken, newPublicSeed, nowSec, readSec
 import { composeReportResponse, generateQuestions, QUESTION_COUNT, score, toPublicQuestion, type ReportScope } from './diagnosis.js';
 import { monetizationEnabled } from './config.js';
 import { accountService } from './accounts.js';
+import { advancedAccess, parseLevel } from './levels.js';
 
 /** 채점 요청 본문 최대 크기 (토큰 + 12문항 답·시간이면 1KB 안팎) */
 const MAX_BODY_BYTES = 8 * 1024;
@@ -29,6 +30,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   payload_too_large: '요청이 너무 큽니다.',
   server_misconfigured: '서버 설정 오류로 진단을 시작할 수 없습니다.',
   not_found: '없는 API 경로입니다.',
+  level_unavailable: '심화 진단은 지금 이용할 수 없습니다.',
   auth_invalid: '로그인이 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.',
   service_unavailable: '로그인·이용권 확인 서비스에 잠시 연결할 수 없습니다. 잠시 뒤 다시 시도해 주세요.',
   internal: '서버에서 오류가 났습니다. 잠시 뒤 다시 시도해 주세요.',
@@ -42,6 +44,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   payload_too_large: 413,
   server_misconfigured: 500,
   not_found: 404,
+  level_unavailable: 403,
   auth_invalid: 401,
   service_unavailable: 503,
   internal: 500,
@@ -63,16 +66,35 @@ function fail(where: string, e: unknown): Response {
   return apiError('internal');
 }
 
-/** POST /api/session: 새 시드로 12문항을 만들어 문제만 내려 준다 */
+/**
+ * 세션 요청 본문의 level만 읽는다. 이전에는 본문을 읽지 않았으므로,
+ * 본문이 없거나 JSON이 아니거나 너무 크면 level이 없는 것으로 본다(기본, 이전과 같은 동작).
+ */
+async function sessionLevelBody(req: Request): Promise<unknown> {
+  try {
+    const text = await req.text();
+    if (!text || Buffer.byteLength(text) > MAX_BODY_BYTES) return null;
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/** POST /api/session: 새 시드로 12문항을 만들어 문제만 내려 준다. 본문 { level: "advanced" }면 심화(서버 스위치가 켜졌을 때만). */
 export async function handleSession(req: Request): Promise<Response> {
   if (req.method !== 'POST') return apiError('method_not_allowed');
   try {
     const secret = readSecret();
+    const parsed = parseLevel(await sessionLevelBody(req));
+    if (!parsed.ok) return apiError('bad_request', 'level 값이 올바르지 않습니다. "basic" 또는 "advanced"만 쓸 수 있습니다.');
+    const level = parsed.level;
+    // 심화를 쓸 수 있는지는 정책 함수 한 곳에서만 판단한다. 꺼져 있으면 조용히 기본으로 바꾸지 않고 오류로 알린다.
+    if (level === 'advanced' && (await advancedAccess(req)) !== 'ok') return apiError('level_unavailable');
     const seed = newPublicSeed();
     const iat = nowSec();
-    const qs = generateQuestions(generationSeed(secret, seed));
+    const qs = generateQuestions(generationSeed(secret, seed, level), level);
     const body: SessionResponse = {
-      token: issueToken(secret, seed, iat),
+      token: issueToken(secret, seed, iat, level),
       expiresAt: new Date((iat + TOKEN_TTL_SEC) * 1000).toISOString(),
       questions: qs.map(toPublicQuestion),
     };
@@ -128,6 +150,9 @@ export async function handleReport(req: Request): Promise<Response> {
     const now = nowSec();
     const t = verifyToken(secret, token, now);
     if (!t.ok) return apiError(t.error);
+    // 수준은 서명된 토큰에서만 꺼낸다(요청 본문의 level은 읽지 않는다)
+    const level = t.body.l === 'adv' ? 'advanced' : 'basic';
+    if (level === 'advanced' && (await advancedAccess(req)) !== 'ok') return apiError('level_unavailable');
     // 풀이 시간 합은 토큰 발급 뒤 흐른 시간을 넘을 수 없다
     const total = secs.reduce((x, y) => x + y, 0);
     if (total > now - t.body.iat + ELAPSED_SLACK_SEC) return apiError('bad_request', '풀이 시간이 진단 시작 이후 흐른 시간보다 깁니다.');
@@ -136,12 +161,12 @@ export async function handleReport(req: Request): Promise<Response> {
     const scope = await resolveScope(req);
     if (scope instanceof Response) return scope;
 
-    const qs = generateQuestions(generationSeed(secret, t.body.s));
+    const qs = generateQuestions(generationSeed(secret, t.body.s, level), level);
     // 2차: 실제 문항의 보기 수로 범위 검사
     const rangeError = checkReportInput(body.value, qs.map((q) => q.choices.length));
     if (rangeError) return apiError('bad_request', rangeError);
 
-    const res: ReportResponse = composeReportResponse(score(qs, answers, secs), scope);
+    const res: ReportResponse = composeReportResponse(score(qs, answers, secs, level), scope);
     return json(200, res);
   } catch (e) {
     return fail('report', e);

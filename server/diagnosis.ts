@@ -8,12 +8,19 @@ import type { Problem } from './engine/types.js';
 import { analyze, LEVEL_LABEL, type Report } from './report/analyze.js';
 import type { Explanation, PublicChoice, PublicQuestion, ReportResponse } from '../shared/api.js';
 import { FREE_EXPLANATION_COUNT } from '../shared/product.js';
+import type { DiagnosisLevel } from '../shared/api.js';
+import { ADVANCED_TEMPLATES } from './advanced/registry.js';
+import { generateAdvancedSet } from './advanced/set.js';
+import { ADVANCED_AREAS } from './advanced/areas.js';
+import { ADVANCED_PER_AREA } from './advanced/constants.js';
 
 export const PER_AREA = 3;
 const AREA_IDS = AREAS.filter((a) => TEMPLATES.some((t) => t.area === a.id)).map((a) => a.id);
 export const QUESTION_COUNT = AREA_IDS.length * PER_AREA;
 
-export function generateQuestions(genSeed: number): Problem[] {
+/** level을 주지 않으면 이전과 같은 기본 세트. 심화도 영역별 3문항(12문항)이라 QUESTION_COUNT가 같다. */
+export function generateQuestions(genSeed: number, level: DiagnosisLevel = 'basic'): Problem[] {
+  if (level === 'advanced') return generateAdvancedSet(ADVANCED_TEMPLATES, genSeed, { areas: AREA_IDS, perArea: ADVANCED_PER_AREA });
   return generateSet(TEMPLATES, genSeed, { areas: AREA_IDS, perArea: PER_AREA });
 }
 
@@ -34,12 +41,16 @@ export interface FullResult {
   qs: Problem[];
   answers: number[];
   report: Report;
+  /** 심화일 때만 'advanced' (기본은 없음: 이전과 같은 응답) */
+  level?: 'advanced';
 }
 
-export function score(qs: Problem[], answers: number[], secs: number[]): FullResult {
+export function score(qs: Problem[], answers: number[], secs: number[], level: DiagnosisLevel = 'basic'): FullResult {
   const attempts = answers.map((picked, i) => ({ picked, sec: secs[i] }));
   // 총 풀이 시간 = 문항별 시간 합의 반올림 (이전 브라우저 계산과 같은 기준)
   const totalSec = Math.round(secs.reduce((a, b) => a + b, 0));
+  // 심화는 권장 시간·학습 순서만 심화용 영역 메타로 판정한다(판정 규칙은 같음)
+  if (level === 'advanced') return { qs, answers, report: analyze(qs, attempts, totalSec, ADVANCED_AREAS), level: 'advanced' };
   return { qs, answers, report: analyze(qs, attempts, totalSec) };
 }
 
@@ -90,7 +101,7 @@ export function composeReportResponse(full: FullResult, scope?: ReportScope): Re
 function composeAll(full: FullResult): ReportResponse {
   const { qs, answers, report: r } = full;
   return {
-    meta: { total: r.total, correct: r.correct, totalSec: r.totalSec, perArea: r.areas[0]?.total ?? 0 },
+    meta: { total: r.total, correct: r.correct, totalSec: r.totalSec, perArea: r.areas[0]?.total ?? 0, ...(full.level === 'advanced' ? { level: 'advanced' as const } : {}) },
     summary: r.areas.map((a) => ({
       areaId: a.meta.id,
       name: a.meta.name,

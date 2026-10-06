@@ -189,8 +189,8 @@ export default defineConfig(({ mode, command, isPreview }) => {
   process.env.VITE_LAST_UPDATED = env.VITE_LAST_UPDATED;
   // 로컬 개발용 서버 값(.env.local 등, 커밋하지 않음)을 api 핸들러가 읽을 수 있게 한다.
   // VITE_ 접두어가 없는 값은 브라우저 번들에 들어가지 않는다. 이미 셸에 있는 값이 우선이다.
-  const serverEnv = loadEnv(mode, root, ['REPORT_', 'SUPABASE_', 'MONETIZATION_', 'VITE_SUPABASE_URL']);
-  for (const k of ['REPORT_TOKEN_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'MONETIZATION_ENABLED', 'VITE_SUPABASE_URL'])
+  const serverEnv = loadEnv(mode, root, ['REPORT_', 'SUPABASE_', 'MONETIZATION_', 'ADVANCED_', 'VITE_SUPABASE_URL']);
+  for (const k of ['REPORT_TOKEN_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'MONETIZATION_ENABLED', 'ADVANCED_LEVEL_ENABLED', 'VITE_SUPABASE_URL'])
     if (!process.env[k] && serverEnv[k]) process.env[k] = serverEnv[k];
   return {
     plugins: [

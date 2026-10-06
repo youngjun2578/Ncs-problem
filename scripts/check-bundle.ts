@@ -16,6 +16,7 @@ import { AREAS } from '../server/areas.js';
 import { MISTAKES } from '../server/engine/mistakes.js';
 import { judge } from '../server/report/analyze.js';
 import { generateQuestions } from '../server/diagnosis.js';
+import { ADVANCED_TEMPLATES } from '../server/advanced/registry.js';
 
 const DIST = process.env.DIST ?? 'dist';
 
@@ -58,12 +59,13 @@ for (const [tag, text] of Object.entries(MISTAKES)) {
 for (const a of AREAS) add('영역 설명', a.description);
 for (const [rate, avg, target] of [[1, 1, 75], [1, 999, 75], [0.7, 1, 75], [0, 1, 75]] as const) add('수준 판정 사유', judge(rate, avg, target).reason);
 for (const t of TEMPLATES) add('템플릿 id', t.id);
+for (const t of ADVANCED_TEMPLATES) add('심화 템플릿 id', t.id);
 for (const f of walk('server/templates')) add('템플릿 파일 이름', basename(f));
-for (const m of ['server/engine', 'server/templates', 'server/report', 'registry.ts', 'analyze.ts', 'buildChoices', 'generateSet', 'studyOrder'])
+for (const m of ['server/engine', 'server/templates', 'server/advanced', 'server/report', 'registry.ts', 'analyze.ts', 'buildChoices', 'generateSet', 'studyOrder'])
   add('서버 모듈 이름', m);
 // 실제 생성한 문항의 해설·문제 문장 (시드 몇 개)
 for (const seed of [1, 2, 3, 12345, 987654321]) {
-  for (const q of generateQuestions(seed)) {
+  for (const q of [...generateQuestions(seed), ...generateQuestions(seed, 'advanced')]) {
     q.steps.forEach((s) => add('해설 문장', s));
     add('문제 문장', q.text);
   }

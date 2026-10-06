@@ -23,6 +23,14 @@ export interface PublicQuestion {
 }
 
 /** POST /api/session 응답 */
+/** 진단 수준. basic이 이전부터 있던 진단, advanced는 심화(서버 스위치가 켜졌을 때만). */
+export type DiagnosisLevel = 'basic' | 'advanced';
+
+/** POST /api/session 요청 본문(선택). 없거나 level이 없으면 기본. */
+export interface SessionRequest {
+  level?: DiagnosisLevel;
+}
+
 export interface SessionResponse {
   token: string;
   /** 토큰 만료 시각 (ISO 8601) */
@@ -101,6 +109,8 @@ export interface ReportResponse {
     correct: number;
     totalSec: number;
     perArea: number;
+    /** 심화일 때만 "advanced". 기본 응답에는 이 필드가 없다(이전과 같음). */
+    level?: 'advanced';
   };
   summary: SummaryRow[];
   areaDetails: AreaDetail[];
@@ -115,6 +125,7 @@ export type ApiErrorCode =
   | 'payload_too_large'
   | 'server_misconfigured'
   | 'not_found'
+  | 'level_unavailable'
   | 'auth_invalid'
   | 'service_unavailable'
   | 'internal';
