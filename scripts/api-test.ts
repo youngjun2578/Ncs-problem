@@ -7,16 +7,23 @@
  *  - 변조·만료·다른 키·미래 시각·다른 버전 토큰, 잘못된 개수·범위의 답과 시간이 거부되는지
  *  - 클라이언트가 보낸 점수·정답 여부를 쓰지 않는지
  *  - 답·토큰이 로그에 남지 않는지
+ *  - 이용권 서버 스위치(MONETIZATION_ENABLED) 모드에 따라 응답 기준이 다르다
+ *      꺼짐 모드: 채점 응답은 전체(gated 필드 없음)
+ *      켜짐 모드: 로그인 없는 요청은 무료 응답(gated: true, 영역별 상세 없음, 해설 1·2번만). 이 테스트는 로그인 토큰을 보내지 않는다
+ *    두 모드 모두 이 파일 하나로 검사한다: MONETIZATION_ENABLED=true npx tsx scripts/api-test.ts
  *  - 심화(level): 없으면 이전과 같음, 심화일 때만 토큰에 l, 본문 level로 채점을 바꿀 수 없음, 서버 스위치 꺼짐이면 오류, 위조 토큰 거부
  */
 import { createHmac } from 'node:crypto';
 import { handleReport, handleSession } from '../server/handlers.js';
 import { generationSeed, issueToken, nowSec, TOKEN_TTL_SEC, verifyToken } from '../server/token.js';
 import { composeReportResponse, generateQuestions, QUESTION_COUNT, score, toPublicQuestion } from '../server/diagnosis.js';
+import { monetizationEnabled } from '../server/config.js';
 import { ADVANCED_TARGET_SEC } from '../server/advanced/constants.js';
 import { MISTAKES } from '../server/engine/mistakes.js';
 import type { ReportResponse, SessionResponse } from '../shared/api.js';
 
+/** 이용권 서버 스위치 모드. 켜짐이면 로그인 없는 채점 응답은 무료 범위다 */
+const MON = monetizationEnabled();
 const SECRET = 'test-secret-0123456789-abcdefghijklmnop';
 const OTHER = 'other-secret-0123456789-abcdefghijklmnop';
 
@@ -113,9 +120,11 @@ async function main() {
   const good = await post(handleReport, { token: session.token, answers, secs: secs12() });
   ok(good.status === 200, '정상 채점 200');
   const rep = (await good.json()) as ReportResponse;
-  ok(JSON.stringify(Object.keys(rep)) === JSON.stringify(['meta', 'summary', 'areaDetails', 'explanations']), '응답 구역 meta·summary·areaDetails·explanations');
+  if (MON) ok(JSON.stringify(Object.keys(rep)) === JSON.stringify(['gated', 'meta', 'summary', 'areaDetails', 'explanations']) && rep.gated === true, '[이용권 켜짐] 응답 구역 gated(true)·meta·summary·areaDetails·explanations');
+  else ok(JSON.stringify(Object.keys(rep)) === JSON.stringify(['meta', 'summary', 'areaDetails', 'explanations']), '응답 구역 meta·summary·areaDetails·explanations');
   ok(rep.meta.correct === 12 && rep.meta.total === 12 && rep.meta.totalSec === 120, `전부 정답 채점 ${JSON.stringify(rep.meta)}`);
-  ok(rep.summary.length === 4 && rep.areaDetails.length === 4 && rep.explanations.length === 12, '구역 크기 4·4·12');
+  if (MON) ok(rep.summary.length === 4 && rep.areaDetails.length === 0 && rep.explanations.length === 2, '[이용권 켜짐] 무료 구역 크기 4·0·2(요약 전체, 상세 없음, 해설 1·2번)');
+  else ok(rep.summary.length === 4 && rep.areaDetails.length === 4 && rep.explanations.length === 12, '구역 크기 4·4·12');
 
   // 클라이언트가 보낸 점수·정답 여부는 무시
   const wrongAnswers = answers.map((a) => (a + 1) % 5);
@@ -237,7 +246,9 @@ async function main() {
     ok(advRep.status === 200 && advJson.meta.level === 'advanced' && advJson.meta.correct === QUESTION_COUNT, `심화: 심화 토큰 + 본문 level basic → 심화로 채점 (${advJson.meta.level}, ${advJson.meta.correct})`);
     ok(advJson.areaDetails.every((a) => a.targetSec === ADVANCED_TARGET_SEC[a.areaId as keyof typeof ADVANCED_TARGET_SEC]), '심화: 권장 시간은 심화용 상수');
     const advQs = generateQuestions(generationSeed(SECRET, advBody.s, 'advanced'), 'advanced');
-    ok(JSON.stringify(advJson) === JSON.stringify(composeReportResponse(score(advQs, advAns, secs12(), 'advanced'))), '심화: 응답 = 심화 채점 결과 그대로');
+    if (MON)
+      ok(JSON.stringify(advJson) === JSON.stringify(composeReportResponse(score(advQs, advAns, secs12(), 'advanced'), 'free')) && advJson.gated === true && advJson.explanations.length === 2, '[이용권 켜짐] 심화: 응답 = 심화 채점 결과의 무료 범위(기본과 같은 규칙)');
+    else ok(JSON.stringify(advJson) === JSON.stringify(composeReportResponse(score(advQs, advAns, secs12(), 'advanced'))), '심화: 응답 = 심화 채점 결과 그대로');
     const basicAns = answersOf(basicOn.token, 'basic');
     const basicRep = await post(handleReport, { token: basicOn.token, answers: basicAns, secs: secs12(), level: 'advanced' });
     const basicJson = (await basicRep.json()) as ReportResponse;
@@ -266,7 +277,7 @@ async function main() {
   ok(!joined.includes(session.token) && !joined.includes(sig), '로그에 토큰 없음');
   ok(!joined.includes(JSON.stringify(answers)) && !/answers|secs/.test(joined), '로그에 답·시간 없음');
 
-  print(`\nAPI 테스트: 통과 ${passed}, 실패 ${failed}`);
+  print(`\nAPI 테스트 (이용권 서버 스위치 ${MON ? '켜짐' : '꺼짐'} 모드): 통과 ${passed}, 실패 ${failed}`);
   if (failed) process.exit(1);
 }
 
