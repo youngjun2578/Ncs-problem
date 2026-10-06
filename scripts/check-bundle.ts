@@ -74,6 +74,9 @@ for (const seed of [1, 2, 3, 12345, 987654321]) {
 
 // 서버 전용 비밀 값: 이름, 실제 값(환경 변수·.env.local에 있으면), 값 모양
 for (const m of ['SUPABASE_SERVICE_ROLE_KEY', 'REPORT_TOKEN_SECRET', 'server/accounts', 'setAccountServiceForTests']) add('서버 비밀 값 이름·모듈', m);
+// 결제: 서버 전용 설정 이름, 결제사 비밀 값 이름(실제 결제사 연결 때 쓸 이름 포함, docs/payments-plan.md), 서버 결제 모듈
+for (const m of ['PAYMENT_PROVIDER', 'PAYMENT_SECRET_KEY', 'PAYMENT_WEBHOOK_SECRET', 'server/payments', 'setPaymentStoreForTests', 'fakePaymentKey', 'fake-payments:'])
+  add('서버 결제 설정·모듈', m);
 const localEnv = (() => {
   try {
     return Object.fromEntries(

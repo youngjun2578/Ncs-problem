@@ -11,6 +11,8 @@
  *  - POST /auth/v1/logout
  *  - DELETE /auth/v1/admin/users/:id  (서비스 키 필요)
  *  - GET/DELETE /rest/v1/entitlements  (서비스 키면 전체, 사용자 토큰이면 본인 행만 = RLS 흉내)
+ *  - POST(upsert)/PATCH /rest/v1/entitlements, GET/POST/PATCH /rest/v1/payment_orders  (서비스 키만 쓰기. 결제 시험용)
+ *    필터는 col=eq.값, col=in.(값,값)만 흉내 낸다
  *  - POST /__mock/state             시험 상태 바꾸기: { entitled: {userId: bool}, auth: 'ok'|'500', db: 'ok'|'500', reset }
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -57,6 +59,9 @@ function verifyJwt(token: string): Record<string, any> | null {
 
 interface State {
   entitled: Record<string, boolean>;
+  /** 이용권 행의 구매 시각·주문번호(결제 시험용) */
+  entMeta: Record<string, { purchased_at: string; order_id: string | null }>;
+  orders: Map<string, Record<string, unknown>>;
   deleted: Set<string>;
   auth: 'ok' | '500';
   db: 'ok' | '500';
@@ -90,7 +95,20 @@ function session(provider: 'google' | 'kakao') {
 }
 
 export async function startMockSupabase(port = 54329) {
-  const state: State = { entitled: {}, deleted: new Set(), auth: 'ok', db: 'ok', codes: new Map(), calls: [] };
+  const state: State = { entitled: {}, entMeta: {}, orders: new Map(), deleted: new Set(), auth: 'ok', db: 'ok', codes: new Map(), calls: [] };
+  /** PostgREST 필터 흉내: col=eq.v, col=in.(a,b) */
+  const filters = (url: URL) =>
+    [...url.searchParams]
+      .filter(([k]) => !['select', 'limit', 'on_conflict', 'order', 'columns'].includes(k))
+      .map(([k, v]) => {
+        const m = /^(eq|in)\.(.*)$/.exec(v);
+        if (!m) return () => false;
+        const want = m[1] === 'eq' ? [m[2]] : m[2].replace(/^\(|\)$/g, '').split(',').map((x) => x.replace(/^"|"$/g, ''));
+        return (row: Record<string, unknown>) => want.includes(String(row[k]));
+      });
+  const match = (url: URL, row: Record<string, unknown>) => filters(url).every((f) => f(row));
+  const entRow = (uid: string) => ({ user_id: uid, status: state.entitled[uid] ? 'active' : 'revoked', purchased_at: state.entMeta[uid]?.purchased_at ?? '2026-10-05T00:00:00Z', order_id: state.entMeta[uid]?.order_id ?? null });
+  const wantsRows = (req: IncomingMessage) => /return=representation/.test(String(req.headers.prefer ?? ''));
   const providerOf = (id: string) => (id === MOCK_USERS.google.id ? 'google' : id === MOCK_USERS.kakao.id ? 'kakao' : null);
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -112,7 +130,7 @@ export async function startMockSupabase(port = 54329) {
     state.calls.push(`${req.method} ${url.pathname}`);
 
     if (url.pathname === '/__mock/state' && req.method === 'POST') {
-      if (body.reset) Object.assign(state, { entitled: {}, deleted: new Set(), auth: 'ok', db: 'ok', calls: [] });
+      if (body.reset) Object.assign(state, { entitled: {}, entMeta: {}, orders: new Map(), deleted: new Set(), auth: 'ok', db: 'ok', calls: [] });
       if (body.entitled) Object.assign(state.entitled, body.entitled);
       if (body.auth) state.auth = body.auth;
       if (body.db) state.db = body.db;
@@ -169,13 +187,48 @@ export async function startMockSupabase(port = 54329) {
       const viewer = isService ? null : verifyJwt(bearer)?.sub;
       const visible = isService || viewer === uid;
       if (req.method === 'GET') {
-        const rows = visible && state.entitled[uid] !== undefined ? [{ status: state.entitled[uid] ? 'active' : 'revoked', purchased_at: '2026-10-05T00:00:00Z' }] : [];
+        const rows = visible && state.entitled[uid] !== undefined ? [entRow(uid)] : [];
         return send(200, rows);
       }
       if (req.method === 'DELETE') {
         if (!isService) return send(403, { message: 'permission denied' });
         delete state.entitled[uid];
+        delete state.entMeta[uid];
         return void res.writeHead(204).end();
+      }
+      if (!isService) return send(403, { message: 'permission denied' });
+      if (req.method === 'POST') {
+        // upsert(on_conflict=user_id)
+        const r = body as Record<string, string>;
+        state.entitled[r.user_id] = r.status === 'active';
+        state.entMeta[r.user_id] = { purchased_at: r.purchased_at, order_id: r.order_id ?? null };
+        return wantsRows(req) ? send(201, [entRow(r.user_id)]) : void res.writeHead(201).end();
+      }
+      if (req.method === 'PATCH') {
+        const hit = Object.keys(state.entitled).map(entRow).filter((r) => match(url, r));
+        for (const r of hit) {
+          if ('status' in body) state.entitled[r.user_id] = body.status === 'active';
+          if ('order_id' in body) state.entMeta[r.user_id] = { ...state.entMeta[r.user_id], order_id: body.order_id };
+        }
+        return wantsRows(req) ? send(200, hit.map((r) => entRow(r.user_id))) : void res.writeHead(204).end();
+      }
+    }
+    if (url.pathname === '/rest/v1/payment_orders') {
+      if (state.db === '500') return send(500, { message: 'mock db down' });
+      const viewer = isService ? null : verifyJwt(bearer)?.sub;
+      if (req.method === 'GET') return send(200, [...state.orders.values()].filter((r) => (isService || r.user_id === viewer) && match(url, r)));
+      if (!isService) return send(403, { message: 'permission denied' });
+      if (req.method === 'POST') {
+        const r = body as Record<string, unknown>;
+        if (state.orders.has(String(r.order_id))) return send(409, { code: '23505', message: 'duplicate key' });
+        const row = { provider_payment_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...r };
+        state.orders.set(String(r.order_id), row);
+        return wantsRows(req) ? send(201, [row]) : void res.writeHead(201).end();
+      }
+      if (req.method === 'PATCH') {
+        const hit = [...state.orders.values()].filter((r) => match(url, r));
+        for (const r of hit) Object.assign(r, body);
+        return wantsRows(req) ? send(200, hit) : void res.writeHead(204).end();
       }
     }
     send(404, { msg: `mock: ${req.method} ${url.pathname}` });

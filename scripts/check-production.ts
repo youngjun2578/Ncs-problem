@@ -10,6 +10,8 @@
  *  - [입력          : 초안 문서의 "[입력 필요]" 류
  *  - [운영자 이름]  : VITE_OPERATOR_NAME 자리 표시
  *  - %VITE_         : 값이 없어 바뀌지 않은 환경 변수 자리
+ *
+ * 결제: Production에 가짜 결제사(PAYMENT_PROVIDER=fake)가 설정되어 있으면 빌드를 멈춘다(서버도 따로 거부한다).
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,6 +20,11 @@ const DIST = process.env.DIST ?? 'dist';
 if (process.env.VERCEL_ENV !== 'production') {
   console.log(`Production 자리 표시 검사: 건너뜀 (VERCEL_ENV=${process.env.VERCEL_ENV ?? '없음'})`);
   process.exit(0);
+}
+
+if (process.env.PAYMENT_PROVIDER === 'fake') {
+  console.error('Production 검사 실패: 가짜 결제사(PAYMENT_PROVIDER=fake)는 Production에 둘 수 없습니다. Vercel 환경 변수에서 Production 값을 지우세요.');
+  process.exit(1);
 }
 
 const NEEDLES = ['example.com', '[입력', '[운영자 이름]', '%VITE_'];
