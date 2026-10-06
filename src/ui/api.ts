@@ -49,5 +49,8 @@ async function post<T>(path: string, body: unknown, bearer?: string | null): Pro
 
 export const startSession = () => post<SessionResponse>('/api/session', {});
 
+/** 심화 세션 요청(심화 화면 스위치가 켜진 빌드에서만 쓴다) */
+export const startAdvancedSession = () => post<SessionResponse>('/api/session', { level: 'advanced' });
+
 /** bearer: 로그인 토큰(기능 스위치가 켜진 빌드에서 로그인한 경우만). 이용권 판단은 서버가 한다. */
 export const requestReport = (req: ReportRequest, bearer?: string | null) => post<ReportResponse>('/api/report', req, bearer);

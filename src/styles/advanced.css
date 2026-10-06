@@ -1,0 +1,34 @@
+/*
+ * 심화 진단 표시(결과·인쇄 화면의 "심화" 표시와 안내).
+ * advanced.ts에서만 불러오므로 심화 화면 스위치가 꺼진 빌드에는 들어가지 않는다.
+ */
+.level-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 var(--s2);
+  margin-left: var(--s2);
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  color: var(--primary);
+  background: var(--primary-soft);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+  letter-spacing: 0;
+}
+.level-note {
+  border-left-color: var(--primary);
+}
+
+@media print {
+  .level-badge {
+    border-color: #000;
+    color: #000;
+    background: none;
+  }
+  .level-note {
+    border-left-color: #000;
+  }
+}
