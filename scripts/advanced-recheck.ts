@@ -136,7 +136,7 @@ const solvers: Record<string, (p: Problem) => Expect> = {
     const people = Array.from({ length: n }, (_, i) => i); // 0=A, 1=B, 2=C
     const adj = (perm: number[], x: number, y: number) => Math.abs(perm.indexOf(x) - perm.indexOf(y)) === 1;
     const ok = (perm: number[]) => {
-      if (/A와 B가 서로 이웃하지 않는/.test(t)) return !adj(perm, 0, 1);
+      if (/A와 B는 서로 이웃하지 않고, C는 맨 앞에 서는/.test(t)) return !adj(perm, 0, 1) && perm[0] === 2;
       if (/A는 맨 앞에 서고, B와 C는 서로 이웃하는/.test(t)) return perm[0] === 0 && adj(perm, 1, 2);
       if (/C는 양 끝에 서지 않는/.test(t)) return adj(perm, 0, 1) && perm[0] !== 2 && perm[n - 1] !== 2;
       if (/C는 맨 앞에 서지 않는/.test(t)) return adj(perm, 0, 1) && perm[0] !== 2;
@@ -175,7 +175,8 @@ const solvers: Record<string, (p: Problem) => Expect> = {
     if (/중앙값/.test(t)) {
       const list = m1(/((?:\d+, ){6,}\d+)/, t)[1].split(', ').map(N);
       const idx = N(m1(/(\d+)번째/, t)[1]) - 1;
-      const y = N(m1(/값 \d+[은는] (\d+)[을를]|값을 (\d+)(?:로|으로)|사실은 (\d+)/, t).slice(1).find(Boolean)!);
+      // 바른 값은 "실제로는 Y…"로 나온다
+      const y = N(m1(/실제로는 (\d+)/, t)[1]);
       list[idx] = y;
       // 작은 값부터 하나씩 꺼내 가운데 위치를 찾는다
       const rest = list.slice(), ordered: number[] = [];
@@ -186,16 +187,14 @@ const solvers: Record<string, (p: Problem) => Expect> = {
       const L = ordered.length;
       return { num: L % 2 ? ordered[(L - 1) / 2] : (ordered[L / 2 - 1] + ordered[L / 2]) / 2 };
     }
-    const n = N(m1(/(\d+)개 자료|자료 (\d+)개/, t).slice(1).find(Boolean)!);
+    const n = N(m1(/(\d+)개 자료|자료 (\d+)개|(\d+)개 (?:점수|판매량|처리 건수) 자료/, t).slice(1).find(Boolean)!);
     const M = N(m1(/평균(?:을|이|은) (\d+)/, t)[1]);
     const nums = all(/(\d+)(?:점|개|건)/g, t).map((m) => N(m[1]));
     // 문장에 나오는 값: 평균, 그리고 잘못 기록한 값·바른 값
-    const mWrong = t.match(/그중 (\d+)\D+?(\d+)\D+?잘못 기록/) ?? t.match(/실제로는 (\d+)\D+인데 (\d+)/) ?? t.match(/\((\d+)\D+→ 바른 값 (\d+)/);
+    // "실제로는 Y인 한 값을 X로 잘못 기록": Y가 바른 값, X가 잘못 기록한 값
+    const mWrong = t.match(/실제로는 (\d+)\D+인 한 값을 (\d+)/);
     if (!mWrong) throw new Error(`값을 읽지 못함 ${nums}`);
-    let correct: number, wrong: number;
-    if (/그중/.test(t)) [correct, wrong] = [N(mWrong[1]), N(mWrong[2])];
-    else if (/실제로는/.test(t)) [correct, wrong] = [N(mWrong[1]), N(mWrong[2])];
-    else [wrong, correct] = [N(mWrong[1]), N(mWrong[2])];
+    const [correct, wrong] = [N(mWrong[1]), N(mWrong[2])];
     // 총합을 다시 만들어 나눈다
     const sum = n * M - wrong + correct;
     return { num: Math.round((sum / n) * 10) / 10 };
