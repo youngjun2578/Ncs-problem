@@ -73,7 +73,7 @@ function seoFiles(siteUrl: string, guides: () => GuideBuild): Plugin {
     apply: 'build',
     generateBundle() {
       const lastmod = process.env.VITE_LAST_UPDATED ?? '';
-      const urls = ['/', '/method/'];
+      const urls = ['/', '/method/', '/privacy/'];
       this.emitFile({
         type: 'asset',
         fileName: 'sitemap.xml',
@@ -191,6 +191,7 @@ export default defineConfig(({ mode, command, isPreview }) => {
           main: resolve(root, 'index.html'),
           diagnosis: resolve(root, 'diagnosis/index.html'),
           method: resolve(root, 'method/index.html'),
+          privacy: resolve(root, 'privacy/index.html'),
           ...guides.pages,
         },
       },

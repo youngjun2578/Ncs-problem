@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>개인정보처리방침 · NCS 수리능력 진단</title>
+<meta name="description" content="NCS 수리능력 진단이 진단 답안과 풀이 시간, 접속 기록 등 방문자 정보를 어떻게 다루는지 안내하는 개인정보처리방침입니다.">
+<link rel="canonical" href="%VITE_SITE_URL%/privacy/">
+<meta name="theme-color" content="#1b2f55" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1623" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="NCS 수리능력 진단">
+<meta property="og:title" content="개인정보처리방침 · NCS 수리능력 진단">
+<meta property="og:description" content="NCS 수리능력 진단은 진단 답안과 풀이 시간을 채점에만 쓰고 저장하지 않습니다. 수집하는 정보와 이용 방법을 안내합니다.">
+<meta property="og:url" content="%VITE_SITE_URL%/privacy/">
+<meta property="og:image" content="%VITE_SITE_URL%/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body>
+<!--#masthead-->
+<main class="page prose" id="main">
+  <p class="eyebrow">안내</p>
+  <h1 class="title">개인정보처리방침</h1>
+  <p class="lead">NCS 수리능력 진단(이하 "이 사이트")이 방문자의 정보를 어떻게 다루는지 안내합니다.</p>
+
+  <dl class="hero-facts">
+    <div><dt>사이트</dt><dd>NCS 수리능력 진단</dd></div>
+    <div><dt>운영자</dt><dd>%VITE_OPERATOR_NAME%</dd></div>
+    <div><dt>문의</dt><dd><a href="mailto:%VITE_CONTACT_EMAIL%">%VITE_CONTACT_EMAIL%</a></dd></div>
+    <!-- 시행일은 이 페이지의 상수로 둔다. 방침을 고치면 날짜도 바꾼다. -->
+    <div><dt>시행일</dt><dd><time datetime="2026-10-06">2026-10-06</time></dd></div>
+  </dl>
+
+  <h2 id="collect">1. 수집하는 정보</h2>
+  <ul>
+    <!--#if monetization--><li>무료 진단은 회원가입이나 로그인 없이 이용할 수 있습니다. 이용권 구매와 이용에만 <!--#if kakao-->구글 또는 카카오<!--#else-->구글<!--#endif--> 계정으로 로그인해야 하며, 이메일·비밀번호로 가입하는 방식은 없습니다.</li><!--#else--><li>회원가입, 로그인, 이름·연락처 입력이 없습니다.</li><!--#endif-->
+    <li>진단을 풀면 채점을 위해 다음 정보가 서버로 전송됩니다: 고른 답, 문항별 풀이 시간, 진단 시작 때 발급되는 세션 토큰. 세션 토큰에는 문제 생성용 번호와 발급 시각이 담기며, 개인을 식별하는 정보는 들어 있지 않습니다.</li>
+  </ul>
+
+  <h2 id="use">2. 이용 목적과 보관</h2>
+  <ul>
+    <li>위 정보는 채점하고 결과 리포트를 만드는 데에만 씁니다.</li>
+    <!--#if monetization--><li>답안과 풀이 시간은 채점이 끝나면 저장하지 않습니다. 진단 결과도 저장하지 않으며, 지난 결과를 보관하는 기능은 없습니다.</li><!--#else--><li>채점이 끝나면 저장하지 않습니다. 이 사이트에는 답안이나 결과를 보관하는 데이터베이스가 없습니다.</li><!--#endif-->
+    <li>서버 오류가 나면 오류 종류만 기록하며, 답안이나 요청 내용은 기록하지 않습니다.</li>
+    <li>결과는 화면에만 표시되고, 페이지를 닫으면 사라집니다. 필요하면 결과 화면에서 인쇄하거나 PDF로 저장할 수 있습니다.</li>
+  </ul>
+<!--#if monetization-->
+  <h2 id="account">로그인과 이용권 정보</h2>
+  <ul>
+    <li>로그인한 경우 이 사이트의 데이터베이스(Supabase)에는 계정 ID와 이용권 상태(구매 여부, 구매 시각)만 저장하며, 결제가 도입되면 결제 주문 번호가 더해집니다. 답안, 풀이 시간, 진단 결과, 이름, 프로필 사진은 이 데이터베이스에 저장하지 않습니다.</li>
+    <li>로그인 처리는 인증 서비스(Supabase Auth)가 맡습니다. 인증 서비스는 계정마다 로그인 방식과, 로그인할 때 <!--#if kakao-->구글·카카오<!--#else-->구글<!--#endif-->에서 받은 계정 정보(동의한 항목에 따라 이메일, 이름, 프로필 사진 주소 등)를 보관할 수 있습니다.</li>
+    <li>계정 삭제: 로그인한 뒤 화면 위 "내 계정"에서 "계정 삭제"를 누르면 계정과 이용권 정보가 바로 삭제됩니다. 삭제하면 되돌릴 수 없습니다.</li>
+  </ul>
+<!--#endif-->
+  <h2 id="logs">3. 자동으로 남을 수 있는 정보</h2>
+  <ul>
+    <li>사이트를 운영하는 호스팅 서비스(Vercel)<!--#if monetization-->와 인증 서비스<!--#endif-->에는 접속 기록(IP 주소, 접속 시각, 요청한 주소, 브라우저 정보 등)이 일반적으로 남을 수 있습니다. 보관 기간과 처리 방식은 해당 사업자의 정책을 따릅니다.</li>
+  </ul>
+
+  <h2 id="cookies">4. 쿠키와 브라우저 저장소</h2>
+  <ul>
+    <!--#if monetization--><li>이 사이트는 쿠키와 방문 분석 도구를 사용하지 않습니다(로그인할 때 열리는 <!--#if kakao-->구글·카카오 화면은 각 회사의<!--#else-->구글 화면은 구글의<!--#endif--> 쿠키를 쓸 수 있습니다). 로그인 유지와 무료 진단 사용 여부 표시를 위해 브라우저 저장소(localStorage)를 사용하며, 브라우저의 사이트 데이터를 지우면 함께 지워집니다.</li><!--#else--><li>쿠키, 방문 분석 도구, 브라우저 저장소(localStorage·sessionStorage 등)를 사용하지 않습니다.</li><!--#endif-->
+    <li>글꼴은 사이트에서 직접 제공하며, 외부 글꼴 서비스를 부르지 않습니다.</li>
+    <li>검색 서비스 등록 확인용 메타 태그(네이버 서치어드바이저)가 있지만, 방문자 정보를 수집하지 않습니다.</li>
+  </ul>
+
+  <h2 id="third">5. 제3자 제공</h2>
+  <ul>
+    <li>수집한 정보를 제3자에게 제공하지 않습니다.</li>
+  </ul>
+
+  <h2 id="rights">6. 이용자의 권리와 문의</h2>
+  <ul>
+    <!--#if monetization--><li>로그인하지 않은 방문자에 대해서는 이용자를 식별할 수 있는 정보를 보관하지 않습니다. 로그인한 이용자는 "내 계정"에서 계정과 이용권 정보를 직접 삭제할 수 있습니다.</li><!--#else--><li>이 사이트는 이용자를 식별할 수 있는 정보를 보관하지 않습니다. 열람·정정·삭제를 요청할 대상 정보가 사실상 없습니다.</li><!--#endif-->
+    <li>궁금한 점은 <a href="mailto:%VITE_CONTACT_EMAIL%">%VITE_CONTACT_EMAIL%</a>로 연락해 주세요.</li>
+  </ul>
+
+  <h2 id="change">7. 변경</h2>
+  <p>이 방침이 바뀌면 시행 전에 이 페이지에 알립니다.</p>
+</main>
+<!--#footer--><!--#if monetization-->
+<script type="module" src="/src/ui/site.ts"></script><!--#endif-->
+</body>
+</html>

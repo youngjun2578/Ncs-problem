@@ -322,7 +322,7 @@ export async function chooseAndSignIn(returnPath: string, purpose: 'login' | 'pu
       <button type="button" class="gsi-btn" data-provider="google">${GOOGLE_LOGO}<span>Google로 계속하기</span></button>
       ${import.meta.env.VITE_KAKAO_LOGIN_ENABLED === 'true' ? '<button type="button" class="btn-secondary auth-provider-alt" data-provider="kakao">카카오로 계속하기</button>' : ''}
     </div>
-    <p class="auth-fine">이 사이트의 데이터베이스에는 계정 ID와 이용권 상태만 저장하며, 답안·진단 결과·이름·프로필 사진은 저장하지 않습니다. 로그인은 인증 서비스(Supabase Auth)가 처리하며, 인증 서비스는 로그인할 때 받은 계정 정보를 보관할 수 있습니다. <a href="/method/#privacy">개인정보 안내</a></p>`,
+    <p class="auth-fine">이 사이트의 데이터베이스에는 계정 ID와 이용권 상태만 저장하며, 답안·진단 결과·이름·프로필 사진은 저장하지 않습니다. 로그인은 인증 서비스(Supabase Auth)가 처리하며, 인증 서비스는 로그인할 때 받은 계정 정보를 보관할 수 있습니다. <a href="/privacy/">개인정보 안내</a></p>`,
   });
   m.dlg.querySelectorAll<HTMLButtonElement>('[data-provider]').forEach((b) =>
     b.addEventListener('click', async () => {
