@@ -134,7 +134,6 @@ export function renderResult(app: HTMLElement, res: ReportResponse, retry: () =>
     ${gated ? `<p class="muted no-print print-hint">인쇄 / PDF에는 지금 화면의 무료 리포트(영역별 요약, 1~${lockedFrom - 1}번 해설)만 담기며 영역별 상세는 빠집니다.</p>` : ''}
     <p class="fine">문제는 모두 직접 만든 템플릿에서 생성한 연습용 문제이며, 실제 채용 시험의 출제 범위·난이도와 다를 수 있습니다.</p>
 
-    <aside class="ad-slot no-print" aria-label="광고" data-ad-slot="result-bottom">${import.meta.env.DEV ? '<span>광고 영역 (개발 모드 표시)</span>' : ''}</aside>
   </main>`;
   app.querySelectorAll<HTMLButtonElement>('.area-toggle').forEach((b) =>
     b.addEventListener('click', () => {
