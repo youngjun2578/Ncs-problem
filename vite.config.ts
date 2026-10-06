@@ -32,17 +32,29 @@ const GUIDE_LINKS: Record<string, string> = {
 const guideLinks = (html: string, show: boolean) =>
   html.replace(/([ \t]*)<!--#guide-link:(\w+)-->\n?/g, (_, indent: string, k: string) => (show ? `${indent}${GUIDE_LINKS[k]}\n` : ''));
 
-/** 정적 HTML에 공통 머리말·꼬리말을 끼워 넣는다: <!--#masthead-->, <!--#footer--> */
-function partials(flags: BuildFlags, guides: () => GuideBuild): Plugin {
+/**
+ * 애드센스 사이트 소유권 확인 meta. VITE_ADSENSE_ACCOUNT가 없거나 비어 있으면 아무것도 넣지 않는다(이전과 같은 HTML).
+ * 값은 ca-pub-숫자 형식만 받는다. 형식이 틀리면 모든 환경에서 빌드를 멈추고, 값은 HTML에도 오류 메시지에도 넣지 않는다.
+ */
+export function adsenseMeta(value: string | undefined): string {
+  if (value === undefined || value === '') return '';
+  if (!/^ca-pub-[0-9]+$/.test(value)) throw new Error('VITE_ADSENSE_ACCOUNT 형식이 올바르지 않습니다. "ca-pub-" 뒤에 숫자만 오는 값이어야 합니다(입력값은 표시하지 않음).');
+  return `<meta name="google-adsense-account" content="${value}">`;
+}
+
+/** 정적 HTML에 공통 머리말·꼬리말을 끼워 넣는다: <!--#masthead-->, <!--#footer-->. 애드센스 확인 meta가 있으면 </head> 앞에 한 번 넣는다. */
+function partials(flags: BuildFlags, guides: () => GuideBuild, headMeta = ''): Plugin {
   return {
     name: 'html-partials',
     transformIndexHtml: {
       order: 'pre',
-      handler: (html) =>
-        guideLinks(
+      handler: (html) => {
+        const out = guideLinks(
           applyBuildFlags(html.replace('<!--#masthead-->', partial('masthead')).replace('<!--#footer-->', partial('footer')), flags),
           guides().visible.length > 0,
-        ),
+        );
+        return headMeta ? out.replace('</head>', `${headMeta}\n</head>`) : out;
+      },
     },
   };
 }
@@ -182,7 +194,7 @@ export default defineConfig(({ mode, command, isPreview }) => {
     if (!process.env[k] && serverEnv[k]) process.env[k] = serverEnv[k];
   return {
     plugins: [
-      partials({ monetization: env.VITE_MONETIZATION_ENABLED === 'true', kakao: env.VITE_KAKAO_LOGIN_ENABLED === 'true' }, currentGuides),
+      partials({ monetization: env.VITE_MONETIZATION_ENABLED === 'true', kakao: env.VITE_KAKAO_LOGIN_ENABLED === 'true' }, currentGuides, adsenseMeta(env.VITE_ADSENSE_ACCOUNT)),
       seoFiles(env.VITE_SITE_URL ?? 'https://example.com', currentGuides),
       apiRoutes(),
       guidesDev(() => (guides = writeGuides({ root, includeDrafts }))),
