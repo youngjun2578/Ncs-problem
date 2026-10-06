@@ -7,13 +7,14 @@
     "dev": "vite",
     "validate": "tsx scripts/validate.ts",
     "typecheck": "tsc --noEmit",
-    "build": "npm run validate && npm run typecheck && vite build",
+    "build": "npm run validate && npm run typecheck && vite build && npm run check:production",
     "preview": "vite preview",
     "test:golden": "tsx scripts/golden-compare.ts",
     "test:api": "tsx scripts/api-test.ts",
     "check:bundle": "tsx scripts/check-bundle.ts",
     "test:gating": "tsx scripts/gating-test.ts",
     "check:guides": "tsx scripts/guides/check-dist.ts",
+    "check:production": "tsx scripts/check-production.ts",
     "guides": "tsx scripts/guides/build.ts --drafts"
   },
   "devDependencies": {
