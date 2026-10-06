@@ -36,6 +36,15 @@ export function distinctWrongs(answer: number, wrongs: Wrong<number>[], need = 4
   return n >= need;
 }
 
+/**
+ * 끝에 괄호가 붙은 말에 조사를 붙인다. 조사는 괄호 앞 말에 맞춘다.
+ * 예: josaBeforeParen('무역수지(수출액 − 수입액)', eulReul) → '무역수지(수출액 − 수입액)를'
+ */
+export function josaBeforeParen(word: string, withJosa: (w: string) => string): string {
+  const head = word.replace(/\(.*\)$/, '');
+  return word + withJosa(head).slice(head.length);
+}
+
 /** 표에 넣을 증감률 문자열: 음수 기호는 유니코드 빼기(−)를 쓴다 */
 export const signed = (r: number) => (r > 0 ? `+${r}` : r < 0 ? `−${-r}` : '0');
 

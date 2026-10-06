@@ -2,7 +2,7 @@
 import type { Template, Generated } from '../../../engine/types.js';
 import { num } from '../../../engine/format.js';
 import { nearBy } from '../../../engine/choices.js';
-import { search, clean1, r1, distinctWrongs } from '../util.js';
+import { search, clean1, r1, distinctWrongs, josaBeforeParen } from '../util.js';
 import { eunNeun, eulReul, euro, iGa, josa } from '../../common.js';
 
 const median = (xs: number[]) => {
@@ -80,7 +80,7 @@ export const fixRecord: Template = {
     const { n, vals, i, y, ans, wrongs, sorted } = p;
     const list = vals.join(', ');
     const text = rng.pick([
-      `${what} 자료 ${n}개가 ${list}(단위: ${unit})로 기록되어 있다. 이 가운데 ${i + 1}번째 값 ${eunNeun(String(vals[i]))} ${eulReul(String(y))} 잘못 적은 것이다. 바르게 고친 자료의 중앙값은?`,
+      `${what} 자료 ${n}개가 ${josaBeforeParen(`${list}(단위: ${unit})`, euro)} 기록되어 있다. 이 가운데 ${i + 1}번째 값 ${eunNeun(String(vals[i]))} ${eulReul(String(y))} 잘못 적은 것이다. 바르게 고친 자료의 중앙값은?`,
       `다음 ${n}개 ${what} 자료(${list}, 단위: ${unit})에서 ${i + 1}번째 값을 ${euro(String(y))} 바로잡았다. 고친 뒤 중앙값은 얼마인가?`,
       `${list}(단위: ${unit}). 위 ${what} 자료의 ${i + 1}번째 값 ${iGa(String(vals[i]))} 사실은 ${y}${unit}이다. 수정한 자료의 중앙값을 구하면?`,
     ]);

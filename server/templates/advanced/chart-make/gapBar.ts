@@ -3,7 +3,8 @@ import type { Template } from '../../../engine/types.js';
 import type { BarSpec, ChartSpec } from '../../../../shared/charts/types.js';
 import { chartProblem, swap } from '../../chart-make/common.js';
 import { years } from '../../chart-read/data.js';
-import { search } from '../util.js';
+import { search, josaBeforeParen } from '../util.js';
+import { eulReul } from '../../common.js';
 
 const CTX = [
   { cap: '연도별 수출액과 수입액', a: '수출액', b: '수입액', gap: '무역수지(수출액 − 수입액)', unit: '억 달러' },
@@ -33,9 +34,9 @@ export const gapBar: Template<ChartSpec> = {
     const hi = gap.indexOf(Math.max(...gap)), lo = gap.indexOf(Math.min(...gap));
     return chartProblem({
       text: rng.pick([
-        `다음 표의 자료로 연도별 ${c.gap}을 막대그래프로 나타냈다. 바르게 그린 것은?`,
-        `표를 보고 해마다의 ${c.gap}을 계산해 막대그래프로 옮기려고 한다. 옳은 것은?`,
-        `${ys[0]}년부터 ${ys[n - 1]}년까지 ${c.gap}을 나타낸 막대그래프로 알맞은 것은?`,
+        `다음 표의 자료로 연도별 ${josaBeforeParen(c.gap, eulReul)} 막대그래프로 나타냈다. 바르게 그린 것은?`,
+        `표를 보고 해마다의 ${josaBeforeParen(c.gap, eulReul)} 계산해 막대그래프로 옮기려고 한다. 옳은 것은?`,
+        `${ys[0]}년부터 ${ys[n - 1]}년까지 ${josaBeforeParen(c.gap, eulReul)} 나타낸 막대그래프로 알맞은 것은?`,
       ]),
       figure: {
         kind: 'table',
