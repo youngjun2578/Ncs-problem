@@ -25,6 +25,7 @@ export const applyBuildFlags = (html: string, flags: BuildFlags) =>
 const GUIDE_LINKS: Record<string, string> = {
   nav: '<a href="/guide/">풀이 가이드</a>',
   footer: '<a href="/guide/">유형별 풀이 가이드</a>',
+  item: '<li><a href="/guide/">유형별 풀이 가이드</a></li>',
   about: '<p>유형마다 풀이 순서와 예제, 자주 하는 실수는 <a href="/guide/">유형별 풀이 가이드</a>에 정리해 두었습니다.</p>',
   main: '<p class="guide-more"><a href="/guide/">유형별 풀이 가이드</a> · 유형마다 풀이 순서와 예제, 자주 하는 실수를 정리했습니다.</p>',
 };
@@ -194,6 +195,7 @@ export default defineConfig(({ mode, command, isPreview }) => {
           method: resolve(root, 'method/index.html'),
           privacy: resolve(root, 'privacy/index.html'),
           about: resolve(root, 'about/index.html'),
+          notFound: resolve(root, '404.html'),
           ...guides.pages,
         },
       },
