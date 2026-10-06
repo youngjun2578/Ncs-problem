@@ -13,7 +13,7 @@ export const profitChain: Template = {
   id: 'adv.arith.profitChain',
   area: 'arith',
   subtype: '정가·할인 후 이익률',
-  difficulty: 1,
+  difficulty: 2,
   generate(rng): Generated {
     const item = rng.pick(ITEMS);
     const askRate = rng.chance(0.5);

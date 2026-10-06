@@ -16,7 +16,7 @@ export const groupMean: Template = {
   id: 'adv.stats.groupMean',
   area: 'stats',
   subtype: '집단 평균 합치기',
-  difficulty: 1,
+  difficulty: 2,
   generate(rng): Generated {
     const [g1, g2, g3] = rng.pick(GROUPS);
     // fromMoved: 옮긴 사람들의 평균을 알려 주고 g3(떠난 집단)의 새 평균을 묻는다
