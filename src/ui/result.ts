@@ -97,7 +97,7 @@ export function renderResult(app: HTMLElement, res: ReportResponse, retry: () =>
   app.innerHTML = `
   <main class="page report" id="main">
     <header class="doc-head">
-      <p class="eyebrow">영역별 결과 · NCS 테스트</p>
+      <p class="eyebrow">영역별 결과 · 수리능력 연습 진단</p>
       <h1 class="title">NCS 수리능력 진단 리포트</h1>
       <dl class="meta">
         <div><dt>진단 일시</dt><dd>${when}</dd></div>
