@@ -128,7 +128,15 @@ export type ApiErrorCode =
   | 'level_unavailable'
   | 'auth_invalid'
   | 'service_unavailable'
-  | 'internal';
+  | 'internal'
+  // 결제(PAYMENTS_ENABLED가 켜졌을 때만)
+  | 'already_entitled'
+  | 'order_not_found'
+  | 'order_forbidden'
+  | 'amount_mismatch'
+  | 'order_state'
+  | 'payment_unavailable'
+  | 'webhook_invalid';
 
 export interface ApiError {
   error: ApiErrorCode;

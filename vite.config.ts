@@ -106,10 +106,15 @@ function seoFiles(siteUrl: string, guides: () => GuideBuild): Plugin {
  * 배포 환경에서는 api/*.ts가 Vercel 함수로 따로 동작하고, 이 플러그인은 쓰이지 않는다.
  */
 type Handler = (req: Request) => Promise<Response>;
-const API_ROUTES: Record<string, keyof typeof import('./server/handlers')> = {
-  '/api/session': 'handleSession',
-  '/api/report': 'handleReport',
-  '/api/account-delete': 'handleAccountDelete',
+const API_ROUTES: Record<string, [module: string, name: string]> = {
+  '/api/session': ['/server/handlers.ts', 'handleSession'],
+  '/api/report': ['/server/handlers.ts', 'handleReport'],
+  '/api/account-delete': ['/server/handlers.ts', 'handleAccountDelete'],
+  '/api/payments/order': ['/server/payments/handlers.ts', 'handlePaymentOrder'],
+  '/api/payments/confirm': ['/server/payments/handlers.ts', 'handlePaymentConfirm'],
+  '/api/payments/cancel': ['/server/payments/handlers.ts', 'handlePaymentCancel'],
+  '/api/payments/fake-approve': ['/server/payments/handlers.ts', 'handlePaymentFakeApprove'],
+  '/api/payments/webhook': ['/server/payments/handlers.ts', 'handlePaymentWebhook'],
 };
 
 async function toWebRequest(req: IncomingMessage): Promise<Request> {
@@ -132,17 +137,17 @@ function apiRoutes(): Plugin {
     use((req, res, next) => {
       const path = (req.url ?? '').split('?')[0];
       if (!path.startsWith('/api/')) return next();
-      const name = API_ROUTES[path];
+      const route = API_ROUTES[path];
       (async () => {
-        if (!name) {
+        if (!route) {
           res.statusCode = 404;
           res.setHeader('content-type', 'application/json; charset=utf-8');
           res.end(JSON.stringify({ error: 'not_found', message: '없는 API 경로입니다.' }));
           return;
         }
         // 핸들러를 요청마다 불러와서 server/ 코드를 고치면 바로 반영된다
-        const mod = await (await loader()).ssrLoadModule('/server/handlers.ts');
-        await sendWebResponse(res, await (mod[name] as Handler)(await toWebRequest(req)));
+        const mod = await (await loader()).ssrLoadModule(route[0]);
+        await sendWebResponse(res, await (mod[route[1]] as Handler)(await toWebRequest(req)));
       })().catch((e) => {
         console.error('[api] 개발 서버 처리 오류:', e instanceof Error ? e.message : e);
         if (!res.headersSent) res.statusCode = 500;
@@ -189,8 +194,8 @@ export default defineConfig(({ mode, command, isPreview }) => {
   process.env.VITE_LAST_UPDATED = env.VITE_LAST_UPDATED;
   // 로컬 개발용 서버 값(.env.local 등, 커밋하지 않음)을 api 핸들러가 읽을 수 있게 한다.
   // VITE_ 접두어가 없는 값은 브라우저 번들에 들어가지 않는다. 이미 셸에 있는 값이 우선이다.
-  const serverEnv = loadEnv(mode, root, ['REPORT_', 'SUPABASE_', 'MONETIZATION_', 'ADVANCED_', 'VITE_SUPABASE_URL']);
-  for (const k of ['REPORT_TOKEN_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'MONETIZATION_ENABLED', 'ADVANCED_LEVEL_ENABLED', 'VITE_SUPABASE_URL'])
+  const serverEnv = loadEnv(mode, root, ['REPORT_', 'SUPABASE_', 'MONETIZATION_', 'ADVANCED_', 'PAYMENT', 'VITE_SUPABASE_URL']);
+  for (const k of ['REPORT_TOKEN_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'MONETIZATION_ENABLED', 'ADVANCED_LEVEL_ENABLED', 'PAYMENTS_ENABLED', 'PAYMENT_PROVIDER', 'VITE_SUPABASE_URL'])
     if (!process.env[k] && serverEnv[k]) process.env[k] = serverEnv[k];
   return {
     plugins: [

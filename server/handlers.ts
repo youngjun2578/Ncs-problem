@@ -20,7 +20,7 @@ const ELAPSED_SLACK_SEC = 120;
 
 const HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 
-const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: HEADERS });
+export const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: HEADERS });
 
 const MESSAGES: Record<ApiErrorCode, string> = {
   bad_request: '요청 형식이 올바르지 않습니다.',
@@ -34,6 +34,13 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   auth_invalid: '로그인이 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.',
   service_unavailable: '로그인·이용권 확인 서비스에 잠시 연결할 수 없습니다. 잠시 뒤 다시 시도해 주세요.',
   internal: '서버에서 오류가 났습니다. 잠시 뒤 다시 시도해 주세요.',
+  already_entitled: '이미 이용권이 있습니다.',
+  order_not_found: '주문을 찾을 수 없습니다.',
+  order_forbidden: '이 주문을 처리할 수 없습니다.',
+  amount_mismatch: '결제 금액이 주문과 맞지 않습니다.',
+  order_state: '이미 처리된 주문입니다.',
+  payment_unavailable: '결제 서비스에 잠시 연결할 수 없습니다. 잠시 뒤 다시 시도해 주세요.',
+  webhook_invalid: '알림 서명이 올바르지 않습니다.',
 };
 
 const STATUS: Record<ApiErrorCode, number> = {
@@ -48,6 +55,13 @@ const STATUS: Record<ApiErrorCode, number> = {
   auth_invalid: 401,
   service_unavailable: 503,
   internal: 500,
+  already_entitled: 409,
+  order_not_found: 404,
+  order_forbidden: 403,
+  amount_mismatch: 400,
+  order_state: 409,
+  payment_unavailable: 503,
+  webhook_invalid: 401,
 };
 
 export function apiError(code: ApiErrorCode, message = MESSAGES[code]): Response {
@@ -57,7 +71,7 @@ export function apiError(code: ApiErrorCode, message = MESSAGES[code]): Response
 }
 
 /** 예외를 응답으로 바꾼다. 로그에는 오류 종류만 남기고 요청 내용은 남기지 않는다. */
-function fail(where: string, e: unknown): Response {
+export function fail(where: string, e: unknown): Response {
   if (e instanceof ConfigError) {
     console.error(`[${where}] 설정 오류: ${e.message}`);
     return apiError('server_misconfigured', `${MESSAGES.server_misconfigured} (${e.message})`);
@@ -104,7 +118,7 @@ export async function handleSession(req: Request): Promise<Response> {
   }
 }
 
-async function readJson(req: Request): Promise<{ ok: true; value: unknown } | { ok: false; res: Response }> {
+export async function readJson(req: Request): Promise<{ ok: true; value: unknown } | { ok: false; res: Response }> {
   const declared = Number(req.headers.get('content-length') ?? 0);
   if (declared > MAX_BODY_BYTES) return { ok: false, res: apiError('payload_too_large') };
   const text = await req.text();
@@ -174,7 +188,7 @@ export async function handleReport(req: Request): Promise<Response> {
 }
 
 /** Authorization: Bearer <토큰> 에서 토큰만 꺼낸다. 헤더가 없으면 null, 모양이 틀리면 false */
-function bearer(req: Request): string | null | false {
+export function bearer(req: Request): string | null | false {
   const h = req.headers.get('authorization');
   if (h === null || h.trim() === '') return null;
   const m = /^Bearer\s+([A-Za-z0-9._~+/=-]{1,4096})$/.exec(h.trim());
