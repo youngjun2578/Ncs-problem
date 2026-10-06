@@ -7,11 +7,13 @@
  *  - 변조·만료·다른 키·미래 시각·다른 버전 토큰, 잘못된 개수·범위의 답과 시간이 거부되는지
  *  - 클라이언트가 보낸 점수·정답 여부를 쓰지 않는지
  *  - 답·토큰이 로그에 남지 않는지
+ *  - 심화(level): 없으면 이전과 같음, 심화일 때만 토큰에 l, 본문 level로 채점을 바꿀 수 없음, 서버 스위치 꺼짐이면 오류, 위조 토큰 거부
  */
 import { createHmac } from 'node:crypto';
 import { handleReport, handleSession } from '../server/handlers.js';
 import { generationSeed, issueToken, nowSec, TOKEN_TTL_SEC, verifyToken } from '../server/token.js';
-import { generateQuestions, QUESTION_COUNT } from '../server/diagnosis.js';
+import { composeReportResponse, generateQuestions, QUESTION_COUNT, score, toPublicQuestion } from '../server/diagnosis.js';
+import { ADVANCED_TARGET_SEC } from '../server/advanced/constants.js';
 import { MISTAKES } from '../server/engine/mistakes.js';
 import type { ReportResponse, SessionResponse } from '../shared/api.js';
 
@@ -175,6 +177,89 @@ async function main() {
   ok((await errCode(getRes)) === '405:method_not_allowed', 'GET → 405');
   const getSes = await handleSession(new Request('http://localhost/api/session', { method: 'GET' }));
   ok((await errCode(getSes)) === '405:method_not_allowed', '세션 GET → 405');
+
+  // 7. 심화(level)
+  {
+    const decode = (tok: string) => JSON.parse(Buffer.from(tok.split('.')[0], 'base64url').toString('utf8'));
+    const signRaw = (bodyObj: unknown) => {
+      const b = Buffer.from(JSON.stringify(bodyObj)).toString('base64url');
+      return `${b}.${createHmac('sha256', SECRET).update(b).digest('base64url')}`;
+    };
+    const sessionWith = (body: unknown) =>
+      handleSession(new Request('http://localhost/api/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body) }));
+    const answersOf = (tok: string, level: 'basic' | 'advanced') => {
+      const v = verifyToken(SECRET, tok);
+      if (!v.ok) throw new Error('토큰 검증 실패');
+      return generateQuestions(generationSeed(SECRET, v.body.s, level), level).map((q) => q.answerIndex);
+    };
+    delete process.env.ADVANCED_LEVEL_ENABLED;
+
+    // 7-1. level이 없는 요청은 이전과 같다(본문 없음·빈 객체·JSON 아님·basic)
+    for (const [name, body] of [['본문 없음', undefined], ['빈 객체', {}], ['JSON 아님', 'not json'], ['level basic', { level: 'basic' }], ['다른 키만', { foo: 1 }]] as const) {
+      const r = await sessionWith(body);
+      const j = (await r.json()) as SessionResponse;
+      const tb = decode(j.token);
+      const want = generateQuestions(generationSeed(SECRET, tb.s)).map(toPublicQuestion);
+      ok(r.status === 200 && JSON.stringify(Object.keys(tb)) === JSON.stringify(['v', 's', 'iat']), `심화: ${name} → 200, 토큰 본문 {v,s,iat}만 (${Object.keys(tb)})`);
+      ok(JSON.stringify(j.questions) === JSON.stringify(want), `심화: ${name} → 기본 문항과 같음`);
+    }
+
+    // 7-2. 잘못된 level 값은 400
+    for (const [name, body] of [['모르는 문자열', { level: 'hard' }], ['숫자', { level: 1 }], ['null', { level: null }], ['배열', { level: ['advanced'] }], ['대문자', { level: 'ADVANCED' }]] as const) {
+      const got = await errCode(await sessionWith(body));
+      ok(got === '400:bad_request', `심화: level ${name} → ${got} (기대 400:bad_request)`);
+    }
+
+    // 7-3. 서버 스위치 꺼짐: 심화 요청은 오류(조용히 기본으로 바꾸지 않음)
+    const offRes = await sessionWith({ level: 'advanced' });
+    const offBody = (await offRes.clone().json()) as { error?: string; questions?: unknown };
+    ok(offRes.status === 403 && offBody.error === 'level_unavailable' && !offBody.questions, `심화: 스위치 꺼짐 + advanced → 403 level_unavailable (${offRes.status})`);
+
+    // 7-4. 스위치 켜짐: 심화 토큰에만 l:"adv", 생성 시드도 따로
+    process.env.ADVANCED_LEVEL_ENABLED = 'true';
+    const advRes = await sessionWith({ level: 'advanced' });
+    const adv = (await advRes.json()) as SessionResponse;
+    const advBody = decode(adv.token);
+    ok(advRes.status === 200 && advBody.l === 'adv' && JSON.stringify(Object.keys(advBody)) === JSON.stringify(['v', 's', 'iat', 'l']), `심화: 켜짐 + advanced → 토큰 {v,s,iat,l:"adv"} (${JSON.stringify(Object.keys(advBody))})`);
+    ok(adv.questions.length === QUESTION_COUNT, `심화: 12문항 (${adv.questions.length})`);
+    ok(JSON.stringify(adv.questions) === JSON.stringify(generateQuestions(generationSeed(SECRET, advBody.s, 'advanced'), 'advanced').map(toPublicQuestion)), '심화: 심화 시드(gen:v1:adv)로 만든 문항');
+    ok(JSON.stringify(adv.questions) !== JSON.stringify(generateQuestions(generationSeed(SECRET, advBody.s)).map(toPublicQuestion)), '심화: 같은 공개 시드의 기본 문항과 다름');
+    ok(generationSeed(SECRET, 123, 'advanced') !== generationSeed(SECRET, 123), '심화: 생성 시드 이름표가 다름');
+    const basicOn = (await (await sessionWith({})).json()) as SessionResponse;
+    ok(!('l' in decode(basicOn.token)), '심화: 켜져 있어도 level 없는 요청은 기본 토큰');
+    const advPub = JSON.stringify(adv);
+    for (const word of ['answerIndex', 'mistakeTag', 'steps', 'templateId', 'difficulty', 'adv.']) ok(!advPub.includes(word), `심화: 세션 응답에 ${word} 없음`);
+
+    // 7-5. 심화 채점: 토큰의 level로만. 본문의 level은 무시
+    const advAns = answersOf(adv.token, 'advanced');
+    const advRep = await post(handleReport, { token: adv.token, answers: advAns, secs: secs12(), level: 'basic' });
+    const advJson = (await advRep.json()) as ReportResponse;
+    ok(advRep.status === 200 && advJson.meta.level === 'advanced' && advJson.meta.correct === QUESTION_COUNT, `심화: 심화 토큰 + 본문 level basic → 심화로 채점 (${advJson.meta.level}, ${advJson.meta.correct})`);
+    ok(advJson.areaDetails.every((a) => a.targetSec === ADVANCED_TARGET_SEC[a.areaId as keyof typeof ADVANCED_TARGET_SEC]), '심화: 권장 시간은 심화용 상수');
+    const advQs = generateQuestions(generationSeed(SECRET, advBody.s, 'advanced'), 'advanced');
+    ok(JSON.stringify(advJson) === JSON.stringify(composeReportResponse(score(advQs, advAns, secs12(), 'advanced'))), '심화: 응답 = 심화 채점 결과 그대로');
+    const basicAns = answersOf(basicOn.token, 'basic');
+    const basicRep = await post(handleReport, { token: basicOn.token, answers: basicAns, secs: secs12(), level: 'advanced' });
+    const basicJson = (await basicRep.json()) as ReportResponse;
+    ok(basicRep.status === 200 && !('level' in basicJson.meta) && basicJson.meta.correct === QUESTION_COUNT, '심화: 기본 토큰 + 본문 level advanced → 기본으로 채점, meta.level 없음');
+
+    // 7-6. 위조·조작 토큰
+    const [b64, sigPart] = basicOn.token.split('.');
+    const tampered = Buffer.from(JSON.stringify({ ...decode(basicOn.token), l: 'adv' })).toString('base64url') + '.' + sigPart;
+    ok((await errCode(await post(handleReport, { token: tampered, answers: basicAns, secs: secs12() }))) === '401:invalid_token', '심화: 기본 토큰에 l 붙이기(서명 그대로) → 401');
+    const strippedBody = Buffer.from(JSON.stringify({ v: advBody.v, s: advBody.s, iat: advBody.iat })).toString('base64url');
+    ok((await errCode(await post(handleReport, { token: `${strippedBody}.${adv.token.split('.')[1]}`, answers: advAns, secs: secs12() }))) === '401:invalid_token', '심화: 심화 토큰에서 l 빼기 → 401');
+    ok((await errCode(await post(handleReport, { token: signRaw({ ...advBody, l: 'xyz' }), answers: advAns, secs: secs12() }))) === '401:invalid_token', '심화: 서명은 맞지만 l 값이 모름 → 401');
+    ok(b64.length > 0, '심화: 기본 토큰 형식 유지');
+
+    // 7-7. 스위치를 끈 뒤 남아 있는 심화 토큰으로 채점 → 오류
+    delete process.env.ADVANCED_LEVEL_ENABLED;
+    ok((await errCode(await post(handleReport, { token: adv.token, answers: advAns, secs: secs12() }))) === '403:level_unavailable', '심화: 스위치 꺼짐 + 심화 토큰 채점 → 403');
+    // 기본 토큰은 스위치와 관계없이 그대로
+    ok((await post(handleReport, { token: basicOn.token, answers: basicAns, secs: secs12() })).status === 200, '심화: 스위치 꺼짐 + 기본 토큰 → 200');
+    const legacy = issueToken(SECRET, 777, nowSec());
+    ok(JSON.stringify(Object.keys(decode(legacy))) === JSON.stringify(['v', 's', 'iat']) && verifyToken(SECRET, legacy).ok, '심화: level 없이 발급한 기본 토큰은 이전 형식 그대로 유효');
+  }
 
   // 6. 로그에 답·토큰이 없는지
   const joined = logs.join('\n');

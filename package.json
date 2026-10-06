@@ -17,6 +17,7 @@
     "validate:advanced": "tsx scripts/validate-advanced.ts",
     "validate:advanced:quick": "tsx scripts/validate-advanced.ts --quick",
     "test:advanced": "tsx scripts/advanced-recheck.ts",
+    "test:golden:advanced": "tsx scripts/golden-advanced.ts",
     "guides": "tsx scripts/guides/build.ts --drafts"
   },
   "devDependencies": {
