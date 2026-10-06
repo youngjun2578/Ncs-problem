@@ -56,7 +56,7 @@ const labelNum = (label: string) => N(label.match(/[\d,]+(\.\d+)?/)![0]);
 const parseSigned = (s: string | number) => (typeof s === 'number' ? s : Number(String(s).replace('+', '').replace('−', '-')));
 
 /** 정답 확인 결과: 숫자형은 값, 확률은 분수 문자열, 그래프는 값 배열 */
-type Expect = { num: number } | { frac: string } | { values: number[] };
+type Expect = { num: number } | { frac: string } | { values: number[]; labels?: string[] };
 
 const solvers: Record<string, (p: Problem) => Expect> = {
   'adv.arith.speedRest'(p) {
@@ -100,19 +100,18 @@ const solvers: Record<string, (p: Problem) => Expect> = {
   },
   'adv.arith.profitChain'(p) {
     const t = p.text;
-    const mk = /원가의 (\d+)%만큼|원가보다 (\d+)%/.test(t) ? N(m1(/원가의 (\d+)%만큼|원가보다 (\d+)%/, t).slice(1).find(Boolean)!) : N(m1(/정가는 원가의 (\d+)%/, t)[1]) - 100;
-    const dc = /정가의 (\d+)%를 할인|정가에서 (\d+)%를? 할인/.test(t)
-      ? N(m1(/정가의 (\d+)%를 할인|정가에서 (\d+)%를? 할인/, t).slice(1).find(Boolean)!)
-      : 100 - N(m1(/판매가는 정가의 (\d+)%/, t)[1]);
-    const sell = (cost: number) => (((cost * (100 + mk)) / 100) * (100 - dc)) / 100;
-    if (/이익률/.test(t.slice(-40))) {
-      const cost = N(m1(/원가가? ([\d,]+)원/, t)[1]);
-      return { num: Math.round(((sell(cost) - cost) / cost) * 1000) / 10 };
-    }
-    const profit = N(m1(/([\d,]+)원의 이익|([\d,]+)원을 남겼다|이익은 ([\d,]+)원/, t).slice(1).find(Boolean)!);
-    // 원가 후보를 1,000원 단위로 훑어 이익이 맞는 값을 찾는다
-    for (let cost = 1000; cost <= 1_000_000; cost += 1000) if (near(sell(cost) - cost, profit)) return { num: cost };
-    throw new Error('원가를 찾지 못함');
+    const C = N(m1(/원가가 ([\d,]+)원|개당 ([\d,]+)원에|개당 원가 ([\d,]+)원/, t).slice(1).find(Boolean)!);
+    const mk = /정가는 원가의 (\d+)%/.test(t) ? N(m1(/정가는 원가의 (\d+)%/, t)[1]) - 100 : N(m1(/원가의 (\d+)%만큼|원가보다 (\d+)%/, t).slice(1).find(Boolean)!);
+    const dc = N(m1(/(\d+)%를? 할인/, t)[1]);
+    // 문장에 나오는 개수: 전체, 정가 판매, 할인 판매 순서
+    const [Q, q1, q2] = all(/(\d+)개(?!당)/g, t).map((m) => N(m[1]));
+    if (q1 + q2 !== Q) throw new Error('개수가 맞지 않음');
+    // 원 단위를 100배 한 정수로 한 개씩 팔아 가며 더한다
+    const list100 = C * (100 + mk), sale100 = (list100 * (100 - dc)) / 100;
+    let revenue100 = 0;
+    for (let i = 0; i < Q; i++) revenue100 += i < q1 ? list100 : sale100;
+    const profit = revenue100 / 100 - C * Q;
+    return /이익률/.test(t.slice(-30)) ? { num: Math.round((profit / (C * Q)) * 1000) / 10 } : { num: profit };
   },
   'adv.stats.drawThree'(p) {
     const t = p.text;
@@ -155,20 +154,30 @@ const solvers: Record<string, (p: Problem) => Expect> = {
   },
   'adv.stats.groupMean'(p) {
     const t = p.text;
-    // '전체 N명'은 집단 인원이 아니므로 뺀다
-    const [n1, n2] = all(/(전체 )?(\d+)명/g, t).filter((m) => !m[1]).map((m) => N(m[2]));
-    if (/전체 평균은|평균 점수가|합친 전체 평균이/.test(t) && /평균은 몇 점인가\?$|평균은\?$|평균 점수를 구하면\?$/.test(t) && /전체 평균은 ([\d.]+)점|평균 점수가 ([\d.]+)점|전체 평균이 ([\d.]+)점/.test(t)) {
-      const M = N(m1(/전체 평균은 ([\d.]+)점|평균 점수가 ([\d.]+)점|전체 평균이 ([\d.]+)점/, t).slice(1).find(Boolean)!);
-      const m1v = N(m1(/평균은 (\d+)점이다|평균이 (\d+)점이면|평균이 (\d+)점이고/, t).slice(1).find(Boolean)!);
-      // 둘째 집단 평균을 0~100 정수에서 찾아 전체 평균과 맞춘다
-      for (let m2 = 0; m2 <= 100; m2++) if (near((n1 * m1v + n2 * m2) / (n1 + n2), M)) return { num: m2 };
-      throw new Error('평균을 찾지 못함');
+    const D = '(\\d+(?:\\.\\d+)?)';
+    // 집단 인원: '전체 N명'과 옮긴 인원(…명이)을 뺀 앞의 세 값
+    const [n1, n2, n3] = all(/(전체 )?(\d+)명(?!이)/g, t).filter((m) => !m[1]).map((m) => N(m[2]));
+    const [a1, a2] = all(new RegExp(`평균(?:은)? ${D}점`, 'g'), t).map((m) => N(m[1]));
+    const M = N(m1(new RegExp(`전체 \\d+명의 평균은 ${D}점|전체 평균은 ${D}점|평균 점수가 ${D}점`), t).slice(1).find(Boolean)!);
+    const k = N(m1(/(\d+)명이 /, t)[1]);
+    // 셋째 집단 평균을 0.1점 단위로 찾아 전체 평균과 맞춘다
+    let a3 = NaN;
+    for (let x = 0; x <= 1000; x++) if (near((n1 * a1 + n2 * a2 + n3 * (x / 10)) / (n1 + n2 + n3), M)) a3 = x / 10;
+    if (Number.isNaN(a3)) throw new Error('셋째 집단 평균을 찾지 못함');
+    const moved = t.match(new RegExp(`평균 ${D}점인 \\d+명이`));
+    // 사람 한 명씩 점수를 늘어놓고 옮긴 사람을 빼거나 더한다
+    const people = (n: number, mean: number) => Array<number>(n).fill(mean);
+    const avg = (xs: number[]) => xs.reduce((x, y) => x + y, 0) / xs.length;
+    if (moved) {
+      const pm = N(moved[1]);
+      const rest = [...people(n3, a3)];
+      const left = rest.reduce((x, y) => x + y, 0) - k * pm;
+      return { num: Math.round((left / (n3 - k)) * 10) / 10 };
     }
-    const means = all(/평균(?:은|이)? (\d+)점/g, t).map((m) => N(m[1]));
-    const [a, b] = means;
-    // 한 사람씩 점수를 늘어놓아 평균을 구한다
-    const scores = [...Array(n1).fill(a), ...Array(n2).fill(b)];
-    return { num: Math.round((scores.reduce((x, y) => x + y, 0) / scores.length) * 10) / 10 };
+    const after3 = N(m1(new RegExp(`평균이 ${D}점이 되었다`), t)[1]);
+    const movedTotal = n3 * a3 - (n3 - k) * after3;
+    const g1 = [...people(n1, a1), ...people(k, movedTotal / k)];
+    return { num: Math.round(avg(g1) * 10) / 10 };
   },
   'adv.stats.fixRecord'(p) {
     const t = p.text;
@@ -216,14 +225,14 @@ const solvers: Record<string, (p: Problem) => Expect> = {
   'adv.chartRead.indexGrowth'(p) {
     const tb = table(p);
     const t = p.text;
-    const row = tb.rows.find((r) => t.includes(String(r[0])))!;
-    const ys = all(/(\d{4})년/g, t).map((m) => m[1]);
-    // 문장에 나오는 연도 중 기준 연도(표 첫 열)를 뺀 두 해
-    const base = tb.head[1].replace('년', '');
-    const two = [...new Set(ys.filter((y) => y !== base))].sort();
+    const [ya, yb] = m1(/(\d{4})년 대비 (\d{4})년|(\d{4})년에서 (\d{4})년 사이/, t).slice(1).filter(Boolean);
     const col = (y: string) => tb.head.indexOf(`${y}년`);
-    const a = row[col(two[0])] as number, b = row[col(two[1])] as number;
-    return { num: Math.round((b / a - 1) * 1000) / 10 };
+    const [oldRow, newRow] = tb.rows;
+    // 겹치는 해(두 행에 모두 값이 있는 열)를 찾아, 옛 기준 값을 새 기준으로 바꾼다(생성기와 반대 방향)
+    const link = tb.head.findIndex((_, i) => i > 0 && typeof oldRow[i] === 'number' && typeof newRow[i] === 'number');
+    const ratio = (newRow[link] as number) / (oldRow[link] as number);
+    const onNew = (y: string) => (typeof newRow[col(y)] === 'number' ? (newRow[col(y)] as number) : (oldRow[col(y)] as number) * ratio);
+    return { num: Math.round((onNew(yb) / onNew(ya) - 1) * 1000) / 10 };
   },
   'adv.chartRead.perCapitaRate'(p) {
     const tb = table(p);
@@ -249,12 +258,18 @@ const solvers: Record<string, (p: Problem) => Expect> = {
     return { values: sums.map((s) => (s / T) * 100) };
   },
   'adv.chartMake.perCapitaLine'(p) {
-    const [pop, tot] = table(p).rows.map((r) => r.slice(1) as number[]);
-    return { values: tot.map((x, i) => x / pop[i]) };
+    const tb = table(p);
+    const [pop, tot] = tb.rows.map((r) => r.slice(1) as number[]);
+    // 1인당 증가 배수 = 총액 증가 배수 ÷ 인구 증가 배수
+    const values = tot.slice(1).map((x, i) => Math.round(((x / tot[i]) / (pop[i + 1] / pop[i]) - 1) * 1000) / 10);
+    return { values, labels: tb.head.slice(2).map((h) => String(h).replace('년', '')) };
   },
   'adv.chartMake.gapBar'(p) {
-    const [a, b] = table(p).rows.map((r) => r.slice(1) as number[]);
-    return { values: a.map((x, i) => x - b[i]) };
+    const tb = table(p);
+    const [a, b] = tb.rows.map((r) => r.slice(1) as number[]);
+    // 차이의 증가량 = 앞 계열의 증가량 − 뒤 계열의 증가량
+    const values = a.slice(1).map((x, i) => (x - a[i]) - (b[i + 1] - b[i]));
+    return { values, labels: tb.head.slice(2).map((h) => String(h).replace('년', '')) };
   },
 };
 
@@ -285,7 +300,8 @@ for (const tpl of ADVANCED_TEMPLATES) {
       else if ('num' in e) pass = near(labelNum(right.label), e.num);
       else {
         const vals = right.chart && 'values' in right.chart ? right.chart.values : [];
-        pass = vals.length === e.values.length && vals.every((v, k) => Math.abs(v - e.values[k]) < 1e-6);
+        const labels = right.chart && 'labels' in right.chart ? right.chart.labels : [];
+        pass = vals.length === e.values.length && vals.every((v, k) => Math.abs(v - e.values[k]) < 1e-6) && (!e.labels || e.labels.join() === labels.join());
       }
       if (!pass) why = `독립 풀이 ${JSON.stringify(e)} ≠ 정답 보기 ${right.label}`;
     } catch (err) {
