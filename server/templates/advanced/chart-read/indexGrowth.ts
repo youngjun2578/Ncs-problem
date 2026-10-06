@@ -4,7 +4,7 @@ import { num } from '../../../engine/format.js';
 import { nearBy } from '../../../engine/choices.js';
 import { years } from '../../chart-read/data.js';
 import { search, clean1, r1, distinctWrongs } from '../util.js';
-import { eunNeun } from '../../common.js';
+import { euro } from '../../common.js';
 
 const ITEMS = [
   ['쌀', '밀가루', '설탕'],
@@ -30,7 +30,8 @@ export const indexGrowth: Template = {
       if (!clean1(ans)) return null;
       const other = rows[(k + 1) % names.length];
       const wrongs = [
-        { value: b - a, mistakeTag: '%p·% 혼동' as const },
+        // 지수 차이(포인트)를 그대로 증가율로 읽는 실수
+        { value: b - a, mistakeTag: '증가량·증가율 혼동' as const },
         { value: r1(((b - a) / b) * 100), mistakeTag: '기준량 혼동' as const },
         { value: b - 100, mistakeTag: '구간 오독' as const },
         { value: r1(((other[ib] - other[ia]) / other[ia]) * 100), mistakeTag: '항목 오독' as const },
@@ -58,7 +59,7 @@ export const indexGrowth: Template = {
         `지수는 ${ys[0]}년을 100으로 둔 상댓값이라, 두 해의 비교는 지수끼리 나눠서 구해요.`,
         `${names[k]}: ${ys[ia]}년 ${a}, ${ys[ib]}년 ${b}`,
         `증가율 = (${b} − ${a}) ÷ ${a} × 100 = ${num(ans)}%`,
-        `지수 차이 ${eunNeun(String(b - a))} %p와 같은 차이일 뿐 증가율이 아니에요.`,
+        `지수의 차이는 ${b} − ${a} = ${b - a}포인트이지만, 이것이 증가율 ${b - a}%를 뜻하지는 않아요. 증가율은 기준이 되는 ${ys[ia]}년 지수 ${euro(String(a))} 나누어 계산해요.`,
       ],
     };
   },
