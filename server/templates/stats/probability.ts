@@ -1,6 +1,6 @@
 import type { Template, Generated } from '../../engine/types.js';
 import type { Rng } from '../../engine/rng.js';
-import { frac, fracLabel, isProb, C, type Frac } from '../../engine/frac.js';
+import { frac, fracLabel, fracShow, isProb, C, type Frac } from '../../engine/frac.js';
 import { diceOrdered, diceUnordered } from './counting.js';
 import { iGa } from '../common.js';
 
@@ -32,7 +32,7 @@ function drawTwo(rng: Rng): Generated<Frac> {
     steps: [
       `첫 번째가 ${c1} ${obj}일 확률 ${r}/${n}, 되돌려 놓지 않으므로 두 번째는 ${r - 1}/${n - 1}`,
       `${r}/${n} × ${r - 1}/${n - 1} = ${fracLabel(ans)}`,
-      `(조합으로 보면 ${r}C2 ÷ ${n}C2 = ${C(r, 2)}/${C(n, 2)} = ${fracLabel(ans)})`,
+      `(조합으로 보면 ${r}C2 ÷ ${n}C2 = ${fracShow(C(r, 2), C(n, 2))})`,
     ],
   };
 }
@@ -98,7 +98,7 @@ function diceProb(rng: Rng): Generated<Frac> {
       { value: frac(1, 11), mistakeTag: '전체 경우의 수 오류' },
       { value: frac(diceOrdered(s), 12), mistakeTag: '전체 경우의 수 오류' },
     ]),
-    steps: [`전체 경우의 수 = 6 × 6 = 36`, `합이 ${s}인 순서쌍: ${diceOrdered(s)}가지`, `확률 = ${diceOrdered(s)}/36 = ${fracLabel(ans)}`],
+    steps: [`전체 경우의 수 = 6 × 6 = 36`, `합이 ${s}인 순서쌍: ${diceOrdered(s)}가지`, `확률 = ${fracShow(diceOrdered(s), 36)}`],
   };
 }
 
