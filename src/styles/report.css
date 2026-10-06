@@ -320,21 +320,6 @@
   }
 }
 
-/* 광고 자리: 결과 화면 하단에만. 실제 광고 코드는 아직 넣지 않았다. */
-.ad-slot {
-  margin-top: var(--s7);
-  min-height: 0;
-}
-.ad-slot:not(:empty) {
-  min-height: 100px;
-  border: 1px dashed var(--rule-strong);
-  border-radius: var(--radius);
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  font-size: 13px;
-}
-
 /* 이용권 안내 (무료 결과의 잠긴 자리, 이용권 안내 화면) */
 .locked {
   margin-top: var(--s4);

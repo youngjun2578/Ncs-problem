@@ -44,8 +44,7 @@
   .masthead,
   .site-footer nav,
   .progress,
-  .skip,
-  .ad-slot {
+  .skip {
     display: none !important;
   }
   .page {

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>소개·문의 · NCS 수리능력 진단</title>
+<meta name="description" content="NCS 수리능력 진단이 어떤 사이트인지, 문제를 어떻게 만드는지, 누가 운영하는지와 문의 방법을 안내합니다. 공식 기관과 관련 없는 개인 운영 연습용 사이트입니다.">
+<link rel="canonical" href="%VITE_SITE_URL%/about/">
+<meta name="theme-color" content="#1b2f55" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1623" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="NCS 수리능력 진단">
+<meta property="og:title" content="소개·문의 · NCS 수리능력 진단">
+<meta property="og:description" content="NCS 수리능력 진단은 개인이 운영하는 수리능력 연습 진단 사이트입니다. 사이트 소개와 운영자, 문의 방법을 안내합니다.">
+<meta property="og:url" content="%VITE_SITE_URL%/about/">
+<meta property="og:image" content="%VITE_SITE_URL%/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body>
+<!--#masthead-->
+<main class="page prose" id="main">
+  <p class="eyebrow">안내</p>
+  <h1 class="title">소개·문의</h1>
+  <p class="lead">NCS 수리능력 진단은 NCS 직업기초능력 가운데 수리능력을 연습하는 사이트입니다.</p>
+
+  <h2 id="site">이 사이트는</h2>
+  <p>기초연산·기초통계·도표분석·도표작성 4개 영역에서 3문항씩 모두 12문항을 풀면, 영역별 정답률과 풀이 시간, 고른 오답에 따른 틀린 패턴을 리포트로 정리해 보여 줍니다. 회원가입이나 로그인 없이 바로 진단을 시작할 수 있습니다.</p>
+  <p>이 사이트는 개인이 운영하는 연습용 사이트이며, NCS를 운영하는 기관이나 채용 시험을 주관하는 기관과 관련이 없습니다. 진단 결과는 실제 시험 점수나 합격 여부를 예측하지 않습니다.</p>
+
+  <h2 id="how">문제를 만드는 방법</h2>
+  <p>문제는 외부 기출문제나 문제집의 문장을 옮기지 않고, 직접 만든 생성 규칙(템플릿)으로 풀 때마다 새로 만듭니다. 정답은 문제를 만들 때 계산식으로 함께 계산하고, 배포 전에 자동 검사로 확인합니다. 자세한 내용은 <a href="/method/">문제 생성·검증 방식</a>에서 볼 수 있습니다.</p>
+  <!--#guide-link:about-->
+
+  <h2 id="operator">운영</h2>
+  <dl class="hero-facts">
+    <div><dt>사이트</dt><dd>NCS 수리능력 진단</dd></div>
+    <div><dt>운영자</dt><dd>%VITE_OPERATOR_NAME%</dd></div>
+    <div><dt>문의</dt><dd><a href="mailto:%VITE_CONTACT_EMAIL%">%VITE_CONTACT_EMAIL%</a></dd></div>
+  </dl>
+
+  <h2 id="contact">문의와 오류 제보</h2>
+  <p>잘못된 문제나 해설, 화면 오류를 발견하면 <a href="mailto:%VITE_CONTACT_EMAIL%">%VITE_CONTACT_EMAIL%</a>로 알려 주세요. 문제 문장과 보기를 함께 적어 주시면 확인이 빠릅니다. 개인정보를 다루는 방식은 <a href="/privacy/">개인정보처리방침</a>에서 확인할 수 있습니다.</p>
+</main>
+<!--#footer--><!--#if monetization-->
+<script type="module" src="/src/ui/site.ts"></script><!--#endif-->
+</body>
+</html>

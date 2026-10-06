@@ -23,7 +23,10 @@ export const applyBuildFlags = (html: string, flags: BuildFlags) =>
 
 /** 가이드 링크 자리: 보이는 가이드 글이 있을 때만 링크로 바꾸고, 없으면 그 줄을 통째로 지운다 */
 const GUIDE_LINKS: Record<string, string> = {
+  nav: '<a href="/guide/">풀이 가이드</a>',
   footer: '<a href="/guide/">유형별 풀이 가이드</a>',
+  item: '<li><a href="/guide/">유형별 풀이 가이드</a></li>',
+  about: '<p>유형마다 풀이 순서와 예제, 자주 하는 실수는 <a href="/guide/">유형별 풀이 가이드</a>에 정리해 두었습니다.</p>',
   main: '<p class="guide-more"><a href="/guide/">유형별 풀이 가이드</a> · 유형마다 풀이 순서와 예제, 자주 하는 실수를 정리했습니다.</p>',
 };
 const guideLinks = (html: string, show: boolean) =>
@@ -72,7 +75,7 @@ function seoFiles(siteUrl: string, guides: () => GuideBuild): Plugin {
     apply: 'build',
     generateBundle() {
       const lastmod = process.env.VITE_LAST_UPDATED ?? '';
-      const urls = ['/', '/method/'];
+      const urls = ['/', '/method/', '/about/', '/privacy/'];
       this.emitFile({
         type: 'asset',
         fileName: 'sitemap.xml',
@@ -190,6 +193,9 @@ export default defineConfig(({ mode, command, isPreview }) => {
           main: resolve(root, 'index.html'),
           diagnosis: resolve(root, 'diagnosis/index.html'),
           method: resolve(root, 'method/index.html'),
+          privacy: resolve(root, 'privacy/index.html'),
+          about: resolve(root, 'about/index.html'),
+          notFound: resolve(root, '404.html'),
           ...guides.pages,
         },
       },
