@@ -64,8 +64,8 @@ pending ────────────────────────
 - failed·canceled·refunded 주문은 다시 확인해도 409이고 이용권이 생기지 않습니다. 다시 사려면 새 주문을 만듭니다.
 - 결제 확인에서 결제사가 승인했더라도 주문번호·금액이 주문과 다르면 failed로 두고 이용권을 주지 않습니다.
   - **[결정 필요]** 이 경우 실제로 승인된 돈을 자동으로 취소할지는 정해야 합니다. 지금은 표시만 합니다.
-- pending 주문은 만료 처리가 없습니다.
-  - **[결정 필요]** 오래된 pending을 정리할지 정해야 합니다.
+- pending 주문은 만료 처리가 없습니다. 계정당 pending 1개이므로, 결제창을 닫고 다시 구매하면 같은 주문을 이어 씁니다(6절).
+  - **[결정 필요]** 오래된 pending을 정리할지 정해야 합니다(6절 조회 2).
 
 ## 4. 저장 항목
 - 기존 `entitlements`(결정된 항목): 계정 ID, 이용권 상태, 구매 시각, 주문번호.
@@ -94,15 +94,45 @@ pending ────────────────────────
   - 또는 보관용 별도 기록
 - **[결정 필요]** 결제창을 연 상태(pending)에서 계정을 지우면, 그 뒤 결제가 승인돼도 주문이 없어 이용권을 줄 수 없습니다. 이 경우의 환불 절차를 정해야 합니다.
 
-## 6. 중복 결제 정책 (**[결정 필요]**, 코드로 정하지 않음)
-지금 동작은 다음과 같습니다.
-- 이미 이용권이 있는 계정은 새 주문을 만들 수 없습니다(409 `already_entitled`).
-- 이용권이 없을 때 주문을 두 개 만들어 둘 다 결제한 경우: 두 번째 주문도 paid가 되고 이용권은 첫 주문 그대로입니다. 응답에 `duplicate: true`가 들어가고, 화면은 "결제가 확인되었지만 이 계정에는 이미 이용권이 있습니다. 처리 방법은 문의해 주세요."를 보여 줍니다.
+## 6. 중복 결제 정책 (결정됨: 표시만 하고 운영자가 처리 + 계정당 pending 1개)
+영준님 결정(10/7): "환불 대상으로 표시만 하고 운영자가 처리" + "계정당 결제 대기(pending) 주문 1개로 제한". 자동 환불은 만들지 않습니다.
 
-선택지는 세 가지입니다.
-1. 자동 환불: duplicate인 주문은 확인 직후 결제사 취소 API로 바로 환불합니다. 이용자 불편이 없지만 자동 환불 실패 처리가 필요합니다.
-2. 환불 대상으로 표시만: 주문 상태를 따로 두고(예: `paid_duplicate`), 운영자가 확인해 환불합니다. 단순하지만 처리 지연이 생깁니다.
-3. 결제 단계에서 막기: 결제창을 열기 직전에 다시 확인하거나 계정당 pending 주문을 1개로 제한해 중복 자체를 줄입니다. 1·2와 함께 쓰는 보완책입니다.
+동작(가지 payment-hardening)
+- 이미 이용권이 있는 계정은 새 주문을 만들 수 없습니다(409 `already_entitled`).
+- 계정당 pending 주문 1개
+  - DB: 부분 유니크 인덱스 `payment_orders_one_pending_per_user`(`supabase/migrations/20261008000000_payment_constraints.sql`).
+  - 서버: 주문 요청 때 그 계정의 pending 주문이 있으면 새로 만들지 않고 그 주문을 돌려줍니다(`resumed: true`). 동시에 요청이 와서 DB가 두 번째 주문을 거부하면(유니크 위반), 먼저 만들어진 주문을 다시 읽어 똑같이 돌려줍니다(500이 아님).
+  - 남은 pending 주문의 금액·결제사가 지금 값과 다르면(가격·결제사를 바꾼 뒤) 이어 쓰지 않고 409 `order_state`입니다. 이때는 운영자가 그 주문을 정리해야 합니다(아래 조회 2).
+- 이용권 부여는 "이미 있으면 무시"입니다(`insert ... on conflict (user_id) do nothing`, 회수된 행만 조건부로 다시 active). 이용권 계정당 1행은 `entitlements.user_id` 기본키가 보장합니다.
+  - 그래서 같은 계정의 서로 다른 주문 두 개가 동시에 확인돼도 이용권은 한 번만 부여됩니다.
+  - 나중 주문은 paid로 기록되고 응답에 `duplicate: true`가 들어갑니다. 화면은 "결제가 확인되었지만 이 계정에는 이미 이용권이 있습니다. 처리 방법은 문의해 주세요."를 보여 줍니다.
+  - 정상 경로에서는 pending 1개 제한 때문에 이런 일이 거의 생기지 않습니다. 제약을 만들기 전 데이터나 예상 못 한 경합에 대한 마지막 방어입니다.
+- 결제사 거래 식별자(`provider_payment_id`)는 unique입니다. 다른 주문에 이미 기록된 식별자가 오면 그 주문은 failed로 닫고 이용권을 주지 않습니다(확인 응답 409 `payment_conflict`, 웹훅은 `applied: false, reason: payment_id_conflict`).
+
+### 운영자 조회 (새 필드 없이 중복 결제 찾기)
+Supabase 대시보드 → SQL Editor에서 실행합니다. 읽기만 합니다.
+
+조회 1. 환불 대상 후보: paid인데 이용권에 기록된 주문번호와 다른 주문
+```sql
+select o.order_id, o.user_id, o.amount, o.provider, o.provider_payment_id, o.created_at, o.updated_at,
+       e.order_id as entitlement_order_id, e.status as entitlement_status
+from public.payment_orders o
+left join public.entitlements e on e.user_id = o.user_id
+where o.status = 'paid'
+  and e.order_id is distinct from o.order_id
+order by o.updated_at;
+```
+- `entitlement_order_id`가 다른 주문번호이면 중복 결제입니다. 결제사 관리 화면에서 `provider_payment_id`로 환불하면 refunded 웹훅으로 주문이 refunded가 됩니다(이용권은 이 주문 것이 아니므로 회수되지 않음).
+- `entitlement_order_id`가 비어 있으면(이용권 행 없음) 결제는 됐는데 이용권이 없는 주문입니다. 따로 확인이 필요합니다.
+- 시험 주문을 빼려면 `and o.provider <> 'fake'`를 더합니다.
+
+조회 2. 오래된 결제 대기 주문(이어 쓰기가 막힌 주문 포함)
+```sql
+select order_id, user_id, amount, provider, created_at
+from public.payment_orders
+where status = 'pending' and created_at < now() - interval '1 day'
+order by created_at;
+```
 
 ## 7. 무료 1회 뒤 막다른 길
 - 결제 켜짐(구현함): "무료 진단을 이미 사용했습니다" 화면에서 다음 순서로 이어집니다.
@@ -150,5 +180,7 @@ pending ────────────────────────
 - 가칭 세 개는 코드에서 아직 쓰지 않습니다. 서버 전용 두 개(`PAYMENT_SECRET_KEY`, `PAYMENT_WEBHOOK_SECRET`)는 `check:bundle`이 번들에 나오면 실패하도록 미리 넣었습니다.
 
 ## 10. 시험
-- `npm run test:payments`(`npm run test:api`에도 포함): 시나리오 (a)~(j). 저장소 두 가지(메모리, 모의 Supabase를 쓰는 실제 supabase-js 경로)로 같은 시나리오를 돌립니다.
+- `npm run test:payments`(`npm run test:api`에도 포함): 시나리오 (a)~(m). (k) pending 이중 생성 → 이어 쓰기, (l) 서로 다른 주문 동시 확인 → 이용권 1회, (m) 거래 식별자 재사용 거부. 저장소 두 가지(메모리, 모의 Supabase를 쓰는 실제 supabase-js 경로)로 같은 시나리오를 돌립니다.
 - 모의 Supabase(`scripts/mock-supabase.ts`)에 `payment_orders`와 entitlements 쓰기(upsert·update)를 흉내 내는 부분을 더했습니다. 필터는 `eq`, `in`만 지원합니다.
+  - 제약 흉내: 계정당 pending 1개, `provider_payment_id` 유일, 주문번호 유일, status·amount 검사(위반 시 409 + `23505`/400 + `23514`), entitlements `resolution=ignore-duplicates`. 요청 하나를 한 번에 처리할 뿐 실제 DB의 트랜잭션·잠금은 흉내 내지 않으므로 실제 PostgREST와 같다고 보장하지 않습니다.
+- 실제 Supabase 확인: `npm run live:supabase-check`(`scripts/live-supabase-check.ts`, 기본 검증에 포함하지 않음). 절차는 `docs/supabase-payment-live-test.md`.

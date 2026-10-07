@@ -12,6 +12,7 @@
     "test:golden": "tsx scripts/golden-compare.ts",
     "test:api": "tsx scripts/api-test.ts && tsx scripts/payments-test.ts",
     "test:payments": "tsx scripts/payments-test.ts",
+    "live:supabase-check": "tsx scripts/live-supabase-check.ts",
     "check:bundle": "tsx scripts/check-bundle.ts",
     "test:gating": "tsx scripts/gating-test.ts",
     "check:guides": "tsx scripts/guides/check-dist.ts",
