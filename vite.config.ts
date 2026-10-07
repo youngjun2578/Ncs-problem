@@ -33,6 +33,18 @@ const guideLinks = (html: string, show: boolean) =>
   html.replace(/([ \t]*)<!--#guide-link:(\w+)-->\n?/g, (_, indent: string, k: string) => (show ? `${indent}${GUIDE_LINKS[k]}\n` : ''));
 
 /**
+ * 약관·환불 안내 초안(/terms/) 링크 자리: 약관 페이지를 만드는 빌드에서만 링크로 바꾸고, 아니면 그 줄을 통째로 지운다
+ * (꺼진 빌드의 HTML이 이전과 글자 하나까지 같게)
+ */
+const TERMS_LINKS: Record<string, string> = {
+  footer: '<a href="/terms/">이용 약관·환불 안내(초안)</a>',
+};
+const termsLinks = (html: string, show: boolean) =>
+  html.replace(/([ \t]*)<!--#terms-link:(\w+)-->\n?/g, (_, indent: string, k: string) => (show ? `${indent}${TERMS_LINKS[k]}\n` : ''));
+/** 약관 초안 페이지를 만드는지: 결제 스위치와 이용권 스위치가 모두 "true"일 때만(결제는 이용권이 켜졌을 때만 의미가 있다) */
+export const termsPageEnabled = (env: Record<string, string | undefined>) => env.VITE_PAYMENTS_ENABLED === 'true' && env.VITE_MONETIZATION_ENABLED === 'true';
+
+/**
  * 애드센스 사이트 소유권 확인 meta. VITE_ADSENSE_ACCOUNT가 없거나 비어 있으면 아무것도 넣지 않는다(이전과 같은 HTML).
  * 값은 ca-pub-숫자 형식만 받는다. 형식이 틀리면 모든 환경에서 빌드를 멈추고, 값은 HTML에도 오류 메시지에도 넣지 않는다.
  */
@@ -43,15 +55,15 @@ export function adsenseMeta(value: string | undefined): string {
 }
 
 /** 정적 HTML에 공통 머리말·꼬리말을 끼워 넣는다: <!--#masthead-->, <!--#footer-->. 애드센스 확인 meta가 있으면 </head> 앞에 한 번 넣는다. */
-function partials(flags: BuildFlags, guides: () => GuideBuild, headMeta = ''): Plugin {
+function partials(flags: BuildFlags, guides: () => GuideBuild, headMeta = '', terms = false): Plugin {
   return {
     name: 'html-partials',
     transformIndexHtml: {
       order: 'pre',
       handler: (html) => {
-        const out = guideLinks(
-          applyBuildFlags(html.replace('<!--#masthead-->', partial('masthead')).replace('<!--#footer-->', partial('footer')), flags),
-          guides().visible.length > 0,
+        const out = termsLinks(
+          guideLinks(applyBuildFlags(html.replace('<!--#masthead-->', partial('masthead')).replace('<!--#footer-->', partial('footer')), flags), guides().visible.length > 0),
+          terms,
         );
         return headMeta ? out.replace('</head>', `${headMeta}\n</head>`) : out;
       },
@@ -191,6 +203,8 @@ export default defineConfig(({ mode, command, isPreview }) => {
   let guides: GuideBuild = isPreview ? { pages: {}, visible: [], stats: [] } : writeGuides({ root, includeDrafts });
   const currentGuides = () => guides;
   const env = loadEnv(mode, root, 'VITE_');
+  // 약관·환불 안내 초안: 이 빌드에서만 페이지를 만들고 꼬리말 링크를 단다. 검색 제외(noindex), sitemap에 넣지 않음
+  const terms = termsPageEnabled(env);
   process.env.VITE_LAST_UPDATED = env.VITE_LAST_UPDATED;
   // 로컬 개발용 서버 값(.env.local 등, 커밋하지 않음)을 api 핸들러가 읽을 수 있게 한다.
   // VITE_ 접두어가 없는 값은 브라우저 번들에 들어가지 않는다. 이미 셸에 있는 값이 우선이다.
@@ -199,7 +213,7 @@ export default defineConfig(({ mode, command, isPreview }) => {
     if (!process.env[k] && serverEnv[k]) process.env[k] = serverEnv[k];
   return {
     plugins: [
-      partials({ monetization: env.VITE_MONETIZATION_ENABLED === 'true', kakao: env.VITE_KAKAO_LOGIN_ENABLED === 'true' }, currentGuides, adsenseMeta(env.VITE_ADSENSE_ACCOUNT)),
+      partials({ monetization: env.VITE_MONETIZATION_ENABLED === 'true', kakao: env.VITE_KAKAO_LOGIN_ENABLED === 'true' }, currentGuides, adsenseMeta(env.VITE_ADSENSE_ACCOUNT), terms),
       seoFiles(env.VITE_SITE_URL ?? 'https://example.com', currentGuides),
       apiRoutes(),
       guidesDev(() => (guides = writeGuides({ root, includeDrafts }))),
@@ -213,6 +227,7 @@ export default defineConfig(({ mode, command, isPreview }) => {
           privacy: resolve(root, 'privacy/index.html'),
           about: resolve(root, 'about/index.html'),
           notFound: resolve(root, '404.html'),
+          ...(terms ? { terms: resolve(root, 'terms/index.html') } : {}),
           ...guides.pages,
         },
       },

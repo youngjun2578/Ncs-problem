@@ -1,0 +1,33 @@
+/* 약관·환불 안내 초안(/terms/). 결제 켜진 빌드에서만 쓰인다 */
+.draft-banner {
+  margin: 0 0 var(--s5);
+  padding: var(--s4);
+  border: 2px solid var(--bad);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.draft-banner p {
+  margin: 0;
+}
+.draft-banner .draft-banner-title {
+  margin-bottom: var(--s2);
+  color: var(--bad);
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+.terms-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--s2) var(--s4);
+  margin: var(--s3) 0;
+}
+.terms-facts > div {
+  display: contents;
+}
+.terms-facts dt {
+  color: var(--muted);
+}
+.terms-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
