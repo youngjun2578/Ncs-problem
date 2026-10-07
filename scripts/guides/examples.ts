@@ -174,13 +174,18 @@ const SOLVERS: Record<string, { match: RegExp; solve: Solver }[]> = {
         const [a, b] = all(/(\d+)(?:일|시간)/g, p.text);
         const unit = /시간/.test(p.text) ? '시간' : '일';
         const per = unit === '일' ? '하루' : '한 시간';
-        const g = gcd(a + b, a * b);
+        // 분모는 두 기간의 최소공배수로 맞춘다(기본 해설과 같은 방식)
+        const L = lcm(a, b);
+        const sum = L / a + L / b;
+        const g = gcd(sum, L);
+        const [rn, rd] = [sum / g, L / g];
         const ans = (a * b) / (a + b);
+        need(rd / rn === ans, '일의 양: 약분한 하루치와 답이 맞지 않음');
         return {
           steps: [
             `해야 할 일 전체를 1로 둡니다. 혼자 ${a}${unit} 걸리면 ${per}에 1/${a}, 혼자 ${b}${unit} 걸리면 ${per}에 1/${b}만큼 합니다.`,
-            `함께 하면 ${per}에 1/${a} + 1/${b} = ${b}/${a * b} + ${a}/${a * b} = ${a + b}/${a * b}${g > 1 ? ` = ${(a + b) / g}/${(a * b) / g}` : ''}만큼 합니다.`,
-            `1을 채우는 데 걸리는 기간은 1 ÷ ${(a + b) / g}/${(a * b) / g}${(a + b) / g === 1 ? '' : ` = ${(a * b) / g}/${(a + b) / g}`} = ${num(ans)}${unit}입니다.`,
+            `함께 하면 ${per}에 1/${a} + 1/${b}만큼 합니다. 분모를 ${jn(a, '과')} ${b}의 최소공배수 ${jn(L, '으로')} 맞추면 ${L / a}/${L} + ${L / b}/${L} = ${sum}/${L}${g > 1 ? ` = ${rn}/${rd}` : ''}입니다.`,
+            `1을 채우는 데 걸리는 기간은 1 ÷ ${rn}/${rd}${rn === 1 ? '' : ` = ${rd}/${rn}`} = ${num(ans)}${unit}입니다.`,
           ],
           answer: `${num(ans)}${unit}`,
         };

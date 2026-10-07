@@ -3,8 +3,8 @@ slug: work-rate-one-unit
 title: "일의 양 문제: 1을 기준으로 잡는 법"
 description: 혼자 하면 며칠, 함께 하면 며칠을 묻는 일의 양 문제를 전체 일을 1로 두고 하루에 하는 일을 더하는 방법으로 정리하고, 중간에 한 사람이 빠지는 문제까지 예제로 다룹니다.
 area: 기초연산
-status: draft
-updated: 2026-10-05
+status: published
+updated: 2026-10-07
 related: [speed-round-trip-average, concentration-mix-water-evaporation]
 ---
 
