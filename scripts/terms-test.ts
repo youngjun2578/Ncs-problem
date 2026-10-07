@@ -89,6 +89,7 @@ else {
     ok(/<meta name="robots" content="noindex">/.test(t), `${tag}: terms/index.html은 noindex`);
     ok(t.includes('초안 · 법률 검토 전') && t.indexOf('초안 · 법률 검토 전') < t.indexOf('<h1'), `${tag}: 맨 위에 "초안 · 법률 검토 전" 표시`);
     ok(!/<link rel="canonical"/.test(t), `${tag}: canonical 없음`);
+    ok(!/PAYMENTS_ENABLED|MONETIZATION_ENABLED|docs\//.test(t), `${tag}: 설정 이름·내부 문서 경로가 페이지에 없음`);
     ok(withLink.length === html.length, `${tag}: 모든 페이지 꼬리말에 약관 링크 (${withLink.length}/${html.length})`);
   } else {
     ok(!existsSync(join(DIST, 'terms')), `${tag}: dist에 terms/ 없음`);
