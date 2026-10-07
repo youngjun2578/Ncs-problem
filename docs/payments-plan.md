@@ -41,8 +41,8 @@ scripts/payments-test.ts                                       시험(test:api, 
 ### API (모두 POST, 결제 스위치가 꺼져 있으면 404)
 | 경로 | 로그인 | 본문 | 하는 일 |
 |---|---|---|---|
-| `/api/payments/order` | 필요 | 없음 | 주문 만들기. 주문번호·금액(서버 상수 2,900원)·상품 이름은 서버가 정합니다. 이미 이용권이 있으면 409. |
-| `/api/payments/confirm` | 필요 | `orderId, paymentKey, amount` | 결제사에 서버 대 서버로 확인한 뒤에만 이용권을 줍니다. `amount`는 비교용이고 주문 금액과 달라도 이용권을 주지 않습니다. |
+| `/api/payments/order` | 필요 | 없음 | 주문 만들기. 주문번호·금액(서버 상수 2,900원)·상품 이름은 서버가 정합니다. 이미 이용권이 있으면 409. 결제 대기(pending) 주문이 있으면 그 주문을 돌려줍니다(`resumed: true`, 6절). |
+| `/api/payments/confirm` | 필요 | `orderId, paymentKey, amount` | 결제사에 서버 대 서버로 확인한 뒤에만 이용권을 줍니다. `amount`는 비교용이고 주문 금액과 달라도 이용권을 주지 않습니다. 결제사 거래 식별자가 다른 주문에 이미 있으면 409 `payment_conflict`. |
 | `/api/payments/cancel` | 필요 | `orderId` | 결제창에서 취소한 본인의 결제 전 주문을 닫습니다. |
 | `/api/payments/fake-approve` | 없음 | `orderId, amount, outcome` | 가짜 결제사의 "결제창"(시험용)입니다. 결제 키만 만들고, 이것만으로는 아무것도 바뀌지 않습니다. 가짜 결제사가 아니면 404. |
 | `/api/payments/webhook` | 없음(서명) | 결제사 알림 | 서명이 틀리면 401. 같은 알림이 다시 와도 한 번만 반영합니다. |
