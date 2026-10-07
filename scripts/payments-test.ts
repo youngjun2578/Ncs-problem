@@ -11,6 +11,9 @@
  *  (d) 같은 주문 중복 확인 → 이용권 1회  (e) 결제 실패·취소 → 이용권 없음  (f) 환불 → 회수
  *  (g) 웹훅 서명 불일치 거부, 재전송 1회 반영  (h) 로그인 없는 요청 거부
  *  (i) 결제 스위치 꺼짐 → 결제 API 없음(404)  (j) Production에서 가짜 결제사 거부
+ *  (k) 같은 계정 pending 주문 이중 생성 → 같은 주문 이어 쓰기(동시 요청 포함), 저장소는 두 번째 pending을 거부
+ *  (l) 같은 계정의 서로 다른 주문 두 개를 동시에 확인 → 이용권 1회, 나중 주문은 paid + duplicate
+ *  (m) 같은 결제사 거래 식별자(provider_payment_id) 재사용 거부
  */
 import { spawnSync } from 'node:child_process';
 import {
@@ -23,8 +26,10 @@ import {
 import { handleReport, handleSession } from '../server/handlers.js';
 import { fakeWebhookSignature } from '../server/payments/fake.js';
 import { resolveProvider } from '../server/payments/providers.js';
-import { refundOrder } from '../server/payments/service.js';
-import { memoryPaymentStore, paymentStore, setPaymentStoreForTests } from '../server/payments/store.js';
+import { confirmPayment, refundOrder } from '../server/payments/service.js';
+import { fakePaymentKey } from '../server/payments/fake.js';
+import type { PaymentProvider } from '../server/payments/provider.js';
+import { ConflictError, memoryPaymentStore, paymentStore, setPaymentStoreForTests } from '../server/payments/store.js';
 import { PASS_PRICE_KRW } from '../shared/product.js';
 import { generationSeed, verifyToken } from '../server/token.js';
 import { generateQuestions } from '../server/diagnosis.js';
@@ -84,8 +89,17 @@ function webhook(ev: Record<string, unknown>, sign = true) {
 let mem: ReturnType<typeof memoryPaymentStore> | null = null;
 const ent = async (uid: string) => paymentStore().getEntitlement(uid);
 const ord = async (id: string) => paymentStore().getOrder(id);
-/** 이용권을 부여한 횟수(메모리: 기록, supabase: 모의 서버에 들어온 entitlements POST 수) */
-const grants = (uid: string) => (mem ? mem.grants.filter((g) => g.userId === uid).length : mock.state.calls.filter((c) => c === 'POST /rest/v1/entitlements').length);
+/** 이용권을 부여한 횟수(메모리: 기록, supabase: 모의 서버가 이용권 행을 실제로 만들거나 다시 active로 바꾼 수) */
+const grants = (uid: string) => (mem ? mem.grants.filter((g) => g.userId === uid).length : (mock.state.grants[uid] ?? 0));
+/** 이 계정의 pending 주문 수(저장소를 직접 셈) */
+const pendingCount = (uid: string) =>
+  mem ? [...mem.orders.values()].filter((o) => o.userId === uid && o.status === 'pending').length : [...mock.state.orders.values()].filter((r) => r.user_id === uid && r.status === 'pending').length;
+/** 제약을 거치지 않고 pending 주문을 직접 넣는다(제약 이전 데이터·경합으로 생긴 상태를 흉내) */
+function forcePending(uid: string, orderId: string, amount = PASS_PRICE_KRW) {
+  if (mem) mem.orders.set(orderId, { orderId, userId: uid, amount, status: 'pending', provider: 'fake', paymentId: null });
+  else mock.state.orders.set(orderId, { order_id: orderId, user_id: uid, amount, status: 'pending', provider: 'fake', provider_payment_id: null, created_at: '2026-10-07T00:00:00Z', updated_at: '2026-10-07T00:00:00Z' });
+}
+const throwsConflict = (p: Promise<unknown>) => p.then(() => false, (e) => e instanceof ConflictError);
 
 async function fresh() {
   await reset();
@@ -254,6 +268,99 @@ async function scenarios() {
       ok(none.status === 401 && junk.status === 401, `(h) ${name}: 로그인 없음·틀린 토큰 → 401 (${none.status}, ${junk.status})`);
     }
     ok((await ord(o.json.orderId))?.status === 'pending', '(h) 거부된 요청은 주문을 바꾸지 않음');
+  }
+
+  // (k) 같은 계정 pending 주문 이중 생성 → 이어 쓰기
+  await fresh();
+  {
+    const o1 = await order(A);
+    const o2 = await order(A);
+    ok(o1.status === 200 && o1.json.resumed === false, '(k) 첫 주문: 새로 만듦(resumed false)');
+    ok(o2.status === 200 && o2.json.orderId === o1.json.orderId && o2.json.resumed === true && o2.json.amount === PASS_PRICE_KRW, `(k) 두 번째 주문 요청 → 같은 주문 이어 쓰기 (${o2.status} ${o2.json.resumed})`);
+    ok(pendingCount(A.id) === 1, `(k) A의 pending 주문 1개 (${pendingCount(A.id)})`);
+    const k = await approve(o2.json.orderId, o2.json.amount);
+    const c = await confirm(A, o2.json.orderId, k.json.paymentKey, o2.json.amount);
+    ok(c.json.status === 'paid' && (await ent(A.id))?.orderId === o1.json.orderId && grants(A.id) === 1, '(k) 이어 쓴 주문으로 결제 → 이용권 1회');
+    // 동시에 세 번 요청
+    await fresh();
+    const many = await Promise.all([order(B), order(B), order(B)]);
+    ok(many.every((r) => r.status === 200) && new Set(many.map((r) => r.json.orderId)).size === 1, `(k) 동시에 주문 3번 → 모두 200, 같은 주문 (${many.map((r) => r.status).join(',')})`);
+    ok(pendingCount(B.id) === 1, `(k) 동시 요청 뒤 B의 pending 주문 1개 (${pendingCount(B.id)})`);
+    // 저장소(DB 제약) 자체가 두 번째 pending을 거부하는지
+    ok(await throwsConflict(paymentStore().createOrder({ orderId: 'ncs_second_pending_b', userId: B.id, amount: PASS_PRICE_KRW, provider: 'fake' })), '(k) 저장소에 두 번째 pending 직접 넣기 → 유니크 위반(ConflictError)');
+    ok(pendingCount(B.id) === 1 && (await ord('ncs_second_pending_b')) === null, '(k) 두 번째 pending은 저장되지 않음');
+    // 다른 계정의 pending은 서로 막지 않는다
+    const oa = await order(A);
+    ok(oa.status === 200 && oa.json.orderId !== many[0].json.orderId && pendingCount(A.id) === 1, '(k) 다른 계정은 따로 pending 1개');
+    // 취소하면 새 주문
+    await call(handlePaymentCancel, { orderId: many[0].json.orderId }, B.auth());
+    const ob = await order(B);
+    ok(ob.status === 200 && ob.json.resumed === false && ob.json.orderId !== many[0].json.orderId, '(k) 취소 뒤에는 새 주문');
+    // 가격이 바뀌기 전 pending 주문이 남아 있으면 이어 쓰지 않고 409
+    await fresh();
+    forcePending(A.id, 'ncs_old_price_order', PASS_PRICE_KRW + 1000);
+    const stale = await order(A);
+    ok(stale.status === 409 && stale.json.error === 'order_state' && pendingCount(A.id) === 1, `(k) 금액이 다른 pending 주문이 있으면 409 order_state (${stale.status})`);
+  }
+
+  // (l) 같은 계정의 서로 다른 주문 두 개를 동시에 확인 → 이용권 1회
+  for (const revokedBefore of [false, true]) {
+    await fresh();
+    const tag = revokedBefore ? '회수된 이용권이 있던 계정' : '이용권 없던 계정';
+    if (revokedBefore) {
+      const p = await payOnce(A);
+      await refundOrder(paymentStore(), resolveProvider(), p.orderId, '시험 환불');
+    }
+    const before = grants(A.id);
+    // 계정당 pending 1개 제약 때문에 정상 경로로는 두 pending이 함께 있을 수 없다. 제약 이전 데이터를 흉내 내어 직접 넣는다
+    forcePending(A.id, 'ncs_concurrent_x');
+    forcePending(A.id, 'ncs_concurrent_y');
+    const kx = await approve('ncs_concurrent_x', PASS_PRICE_KRW);
+    const ky = await approve('ncs_concurrent_y', PASS_PRICE_KRW);
+    const [cx, cy] = await Promise.all([confirm(A, 'ncs_concurrent_x', kx.json.paymentKey, PASS_PRICE_KRW), confirm(A, 'ncs_concurrent_y', ky.json.paymentKey, PASS_PRICE_KRW)]);
+    ok(cx.status === 200 && cy.status === 200 && cx.json.status === 'paid' && cy.json.status === 'paid', `(l) ${tag}: 두 주문 모두 200 paid (${cx.status}, ${cy.status})`);
+    ok([cx, cy].filter((r) => r.json.duplicate === true).length === 1, `(l) ${tag}: 한 주문만 duplicate (${cx.json.duplicate}, ${cy.json.duplicate})`);
+    ok(grants(A.id) - before === 1, `(l) ${tag}: 이용권 부여 1회 (${grants(A.id) - before})`);
+    const e = await ent(A.id);
+    const winner = cx.json.duplicate ? 'ncs_concurrent_y' : 'ncs_concurrent_x';
+    ok(e?.status === 'active' && e.orderId === winner, `(l) ${tag}: 이용권 active, 주문번호는 먼저 부여된 주문 (${e?.orderId})`);
+    ok((await ord('ncs_concurrent_x'))?.status === 'paid' && (await ord('ncs_concurrent_y'))?.status === 'paid', `(l) ${tag}: 두 주문 모두 paid로 기록(나중 주문은 운영자가 환불 대상으로 찾음)`);
+  }
+  // 웹훅과 확인이 서로 다른 주문으로 동시에 와도 1회
+  await fresh();
+  {
+    forcePending(B.id, 'ncs_concurrent_w');
+    forcePending(B.id, 'ncs_concurrent_c');
+    const kc = await approve('ncs_concurrent_c', PASS_PRICE_KRW);
+    const [w, c] = await Promise.all([
+      webhook({ eventId: 'ev-l', type: 'paid', orderId: 'ncs_concurrent_w', paymentId: 'fake_pay_l_webhook', amount: PASS_PRICE_KRW }),
+      confirm(B, 'ncs_concurrent_c', kc.json.paymentKey, PASS_PRICE_KRW),
+    ]);
+    ok(w.json.applied === true && c.json.status === 'paid' && [w.json.duplicate, c.json.duplicate].filter(Boolean).length === 1 && grants(B.id) === 1, `(l) 웹훅·확인 동시(서로 다른 주문) → 이용권 1회 (${grants(B.id)})`);
+  }
+
+  // (m) 같은 결제사 거래 식별자 재사용 거부
+  await fresh();
+  {
+    const p = await payOnce(A);
+    const used = (await ord(p.orderId))!.paymentId!;
+    // 웹훅이 다른 주문에 같은 거래 식별자를 붙여 옴
+    const o = await order(B);
+    const w = await webhook({ eventId: 'ev-m', type: 'paid', orderId: o.json.orderId, paymentId: used, amount: PASS_PRICE_KRW });
+    ok(w.status === 200 && w.json.applied === false && w.json.reason === 'payment_id_conflict', `(m) 웹훅: 다른 주문의 거래 식별자 → 반영 안 됨 (${JSON.stringify(w.json)})`);
+    ok((await ent(B.id)) === null && (await ord(o.json.orderId))?.status === 'failed' && (await ord(o.json.orderId))?.paymentId === null, '(m) B 이용권 없음, 주문은 failed(거래 식별자 기록 안 함)');
+    ok((await ord(p.orderId))?.paymentId === used && (await ent(A.id))?.orderId === p.orderId, '(m) 원래 주문(A)은 그대로');
+    // 결제 확인: 결제사가 이미 쓰인 거래 식별자를 돌려줌
+    const o2 = await order(B);
+    const real = resolveProvider();
+    const sameId: PaymentProvider = { ...real, confirm: async (q) => ({ ...(await real.confirm(q)), paymentId: used }) as never };
+    const r = await confirmPayment(paymentStore(), sameId, B.id, { orderId: o2.json.orderId, paymentKey: fakePaymentKey(process.env, { orderId: o2.json.orderId, amount: PASS_PRICE_KRW, outcome: 'success' }), amount: PASS_PRICE_KRW });
+    ok('error' in r && r.error === 'payment_conflict', `(m) 확인: 이미 쓰인 거래 식별자 → payment_conflict (${JSON.stringify(r)})`);
+    ok((await ent(B.id)) === null && (await ord(o2.json.orderId))?.status === 'failed' && grants(B.id) === 0, '(m) B 이용권 없음, 주문 failed');
+    // 저장소(DB 제약) 자체가 거부하는지
+    forcePending(B.id, 'ncs_payment_id_reuse');
+    ok(await throwsConflict(paymentStore().transition('ncs_payment_id_reuse', ['pending'], 'paid', { paymentId: used })), '(m) 저장소에 같은 거래 식별자 직접 기록 → 유니크 위반(ConflictError)');
+    ok((await ord('ncs_payment_id_reuse'))?.status === 'pending', '(m) 거부된 갱신은 아무것도 바꾸지 않음');
   }
 }
 

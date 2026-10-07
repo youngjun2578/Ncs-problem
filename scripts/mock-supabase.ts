@@ -13,6 +13,10 @@
  *  - GET/DELETE /rest/v1/entitlements  (서비스 키면 전체, 사용자 토큰이면 본인 행만 = RLS 흉내)
  *  - POST(upsert)/PATCH /rest/v1/entitlements, GET/POST/PATCH /rest/v1/payment_orders  (서비스 키만 쓰기. 결제 시험용)
  *    필터는 col=eq.값, col=in.(값,값)만 흉내 낸다
+ *    제약 흉내(supabase/migrations의 제약과 같은 뜻, 위반하면 409 + code 23505/23514. 실제 PostgREST 응답과 같다고 보장하지 않음)
+ *      - entitlements: 계정당 1행(기본키). Prefer: resolution=ignore-duplicates이면 있는 행을 건드리지 않음(on conflict do nothing)
+ *      - payment_orders: 주문번호 유일, 계정당 pending 1개(부분 유니크), provider_payment_id 유일(빈 값 제외), status 값·amount > 0
+ *    요청 하나는 한 번에 처리된다(요청 사이 끼어들기 없음). 실제 DB의 트랜잭션·잠금은 흉내 내지 않는다
  *  - POST /__mock/state             시험 상태 바꾸기: { entitled: {userId: bool}, auth: 'ok'|'500', db: 'ok'|'500', reset }
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -62,6 +66,8 @@ interface State {
   /** 이용권 행의 구매 시각·주문번호(결제 시험용) */
   entMeta: Record<string, { purchased_at: string; order_id: string | null }>;
   orders: Map<string, Record<string, unknown>>;
+  /** 이용권 행을 실제로 만들거나 다시 active로 바꾼 횟수(계정별) */
+  grants: Record<string, number>;
   deleted: Set<string>;
   auth: 'ok' | '500';
   db: 'ok' | '500';
@@ -95,7 +101,7 @@ function session(provider: 'google' | 'kakao') {
 }
 
 export async function startMockSupabase(port = 54329) {
-  const state: State = { entitled: {}, entMeta: {}, orders: new Map(), deleted: new Set(), auth: 'ok', db: 'ok', codes: new Map(), calls: [] };
+  const state: State = { entitled: {}, entMeta: {}, orders: new Map(), grants: {}, deleted: new Set(), auth: 'ok', db: 'ok', codes: new Map(), calls: [] };
   /** PostgREST 필터 흉내: col=eq.v, col=in.(a,b) */
   const filters = (url: URL) =>
     [...url.searchParams]
@@ -109,6 +115,25 @@ export async function startMockSupabase(port = 54329) {
   const match = (url: URL, row: Record<string, unknown>) => filters(url).every((f) => f(row));
   const entRow = (uid: string) => ({ user_id: uid, status: state.entitled[uid] ? 'active' : 'revoked', purchased_at: state.entMeta[uid]?.purchased_at ?? '2026-10-05T00:00:00Z', order_id: state.entMeta[uid]?.order_id ?? null });
   const wantsRows = (req: IncomingMessage) => /return=representation/.test(String(req.headers.prefer ?? ''));
+  const ignoreDup = (req: IncomingMessage) => /resolution=ignore-duplicates/.test(String(req.headers.prefer ?? ''));
+  const granted = (uid: string) => (state.grants[uid] = (state.grants[uid] ?? 0) + 1);
+  /** payment_orders 제약 검사. 바뀐 뒤 행들(rows)이 제약을 어기면 오류 응답 본문 */
+  const STATUSES = ['pending', 'paid', 'failed', 'canceled', 'refunded'];
+  const orderViolation = (rows: Record<string, unknown>[]) => {
+    for (const r of rows) if (!STATUSES.includes(String(r.status)) || !(Number(r.amount) > 0)) return { code: '23514', message: 'new row violates check constraint' };
+    const seen = new Set<string>();
+    for (const r of rows) {
+      if (r.status === 'pending') {
+        if (seen.has(`p:${r.user_id}`)) return { code: '23505', message: 'duplicate key value violates unique constraint "payment_orders_one_pending_per_user"' };
+        seen.add(`p:${r.user_id}`);
+      }
+      if (r.provider_payment_id != null) {
+        if (seen.has(`k:${r.provider_payment_id}`)) return { code: '23505', message: 'duplicate key value violates unique constraint "payment_orders_provider_payment_id_key"' };
+        seen.add(`k:${r.provider_payment_id}`);
+      }
+    }
+    return null;
+  };
   const providerOf = (id: string) => (id === MOCK_USERS.google.id ? 'google' : id === MOCK_USERS.kakao.id ? 'kakao' : null);
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -130,7 +155,7 @@ export async function startMockSupabase(port = 54329) {
     state.calls.push(`${req.method} ${url.pathname}`);
 
     if (url.pathname === '/__mock/state' && req.method === 'POST') {
-      if (body.reset) Object.assign(state, { entitled: {}, entMeta: {}, orders: new Map(), deleted: new Set(), auth: 'ok', db: 'ok', calls: [] });
+      if (body.reset) Object.assign(state, { entitled: {}, entMeta: {}, orders: new Map(), grants: {}, deleted: new Set(), auth: 'ok', db: 'ok', calls: [] });
       if (body.entitled) Object.assign(state.entitled, body.entitled);
       if (body.auth) state.auth = body.auth;
       if (body.db) state.db = body.db;
@@ -198,8 +223,10 @@ export async function startMockSupabase(port = 54329) {
       }
       if (!isService) return send(403, { message: 'permission denied' });
       if (req.method === 'POST') {
-        // upsert(on_conflict=user_id)
+        // upsert(on_conflict=user_id). ignore-duplicates면 이미 있는 행은 그대로 두고 빈 결과
         const r = body as Record<string, string>;
+        if (state.entitled[r.user_id] !== undefined && ignoreDup(req)) return wantsRows(req) ? send(201, []) : void res.writeHead(201).end();
+        if (state.entitled[r.user_id] === undefined || r.status === 'active') granted(r.user_id);
         state.entitled[r.user_id] = r.status === 'active';
         state.entMeta[r.user_id] = { purchased_at: r.purchased_at, order_id: r.order_id ?? null };
         return wantsRows(req) ? send(201, [entRow(r.user_id)]) : void res.writeHead(201).end();
@@ -207,8 +234,12 @@ export async function startMockSupabase(port = 54329) {
       if (req.method === 'PATCH') {
         const hit = Object.keys(state.entitled).map(entRow).filter((r) => match(url, r));
         for (const r of hit) {
-          if ('status' in body) state.entitled[r.user_id] = body.status === 'active';
+          if ('status' in body) {
+            if (body.status === 'active' && !state.entitled[r.user_id]) granted(r.user_id);
+            state.entitled[r.user_id] = body.status === 'active';
+          }
           if ('order_id' in body) state.entMeta[r.user_id] = { ...state.entMeta[r.user_id], order_id: body.order_id };
+          if ('purchased_at' in body) state.entMeta[r.user_id] = { ...state.entMeta[r.user_id], purchased_at: body.purchased_at };
         }
         return wantsRows(req) ? send(200, hit.map((r) => entRow(r.user_id))) : void res.writeHead(204).end();
       }
@@ -220,13 +251,19 @@ export async function startMockSupabase(port = 54329) {
       if (!isService) return send(403, { message: 'permission denied' });
       if (req.method === 'POST') {
         const r = body as Record<string, unknown>;
-        if (state.orders.has(String(r.order_id))) return send(409, { code: '23505', message: 'duplicate key' });
+        if (state.orders.has(String(r.order_id))) return send(409, { code: '23505', message: 'duplicate key value violates unique constraint "payment_orders_pkey"' });
         const row = { provider_payment_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...r };
+        const bad = orderViolation([...state.orders.values(), row]);
+        if (bad) return send(bad.code === '23505' ? 409 : 400, bad);
         state.orders.set(String(r.order_id), row);
         return wantsRows(req) ? send(201, [row]) : void res.writeHead(201).end();
       }
       if (req.method === 'PATCH') {
         const hit = [...state.orders.values()].filter((r) => match(url, r));
+        // 바꾼 뒤 모습으로 제약을 먼저 검사하고, 어기면 아무것도 바꾸지 않는다(문 하나가 통째로 실패)
+        const after = [...state.orders.values()].map((r) => (hit.includes(r) ? { ...r, ...body } : r));
+        const bad = orderViolation(after);
+        if (bad) return send(bad.code === '23505' ? 409 : 400, bad);
         for (const r of hit) Object.assign(r, body);
         return wantsRows(req) ? send(200, hit) : void res.writeHead(204).end();
       }
