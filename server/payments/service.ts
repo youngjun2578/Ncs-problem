@@ -6,14 +6,21 @@
  *   pending ─(결제 확인 실패·failed 웹훅)→ failed
  *   pending ─(결제창에서 취소·canceled 웹훅)→ canceled
  * 이용권은 pending → paid로 바뀐 그 한 번에만 부여하고, paid → refunded로 바뀐 그 한 번에만 회수한다.
+ *
+ * 중복·동시성(사용자 결정: 계정당 pending 주문 1개, 중복 결제는 표시만 하고 운영자가 처리, 자동 환불 없음)
+ *  - 주문 만들기: 같은 계정에 pending 주문이 있으면 새로 만들지 않고 그 주문을 이어서 쓴다(DB 부분 유니크 인덱스가 최종 방어)
+ *  - 이용권: "이미 있으면 무시"로 넣는다. 같은 계정의 두 주문이 동시에 확인돼도 이용권은 한 번만 부여되고,
+ *    나중 주문은 paid로만 남는다(duplicate). 운영자가 찾는 조회문은 docs/payments-plan.md
  */
 import { randomBytes } from 'node:crypto';
 import { PASS_PRICE_KRW } from '../../shared/product.js';
 import type { PaymentEvent, PaymentProvider } from './provider.js';
-import type { Order, PaymentStore } from './store.js';
+import { ConflictError, type Order, type PaymentStore } from './store.js';
 
 /** 이용권 상품 이름(결제창 표시용) */
 export const ORDER_NAME = 'NCS 수리능력 진단 이용권';
+
+const STALE_PENDING = '결제가 끝나지 않은 이전 주문이 있어 새 주문을 만들 수 없습니다. 문의해 주세요.';
 
 /** 주문번호: 서버가 만든다. 영문·숫자·밑줄·하이픈 34자 */
 export const newOrderId = () => `ncs_${Date.now().toString(36)}_${randomBytes(12).toString('base64url').replace(/[^A-Za-z0-9]/g, '0')}`;
@@ -23,17 +30,37 @@ export type ServiceError =
   | { error: 'order_not_found' }
   | { error: 'order_forbidden' }
   | { error: 'amount_mismatch' }
-  | { error: 'order_state' }
+  | { error: 'order_state'; message?: string }
+  | { error: 'payment_conflict' }
   | { error: 'provider_unavailable' };
 
-/** 주문 만들기: 로그인한 계정만(처리 함수가 확인), 이미 이용권이 있으면 만들지 않는다 */
+/**
+ * 주문 만들기: 로그인한 계정만(처리 함수가 확인), 이미 이용권이 있으면 만들지 않는다.
+ * 같은 계정에 pending 주문이 있으면 그 주문을 그대로 돌려준다(resumed: true). 결제창을 닫고 다시 열어도 막히지 않게 하려는 것.
+ * 남아 있는 pending 주문의 금액·결제사가 지금 값과 다르면(가격·결제사를 바꾼 뒤) 이어 쓰지 않고 409 order_state.
+ */
 export async function createOrder(store: PaymentStore, provider: PaymentProvider, userId: string) {
   const ent = await store.getEntitlement(userId);
   if (ent?.status === 'active') return { error: 'already_entitled' } as const;
+  const respond = async (o: { orderId: string; amount: number }, resumed: boolean) => {
+    const checkout = await provider.prepare({ orderId: o.orderId, amount: o.amount, orderName: ORDER_NAME });
+    return { orderId: o.orderId, amount: o.amount, orderName: ORDER_NAME, test: provider.isTest, checkout, resumed };
+  };
+  const resume = (o: Order) => (o.amount === PASS_PRICE_KRW && o.provider === provider.name ? respond(o, true) : ({ error: 'order_state', message: STALE_PENDING } as const));
+
+  const pending = await store.findPendingOrder(userId);
+  if (pending) return resume(pending);
   const order = { orderId: newOrderId(), userId, amount: PASS_PRICE_KRW, provider: provider.name };
-  await store.createOrder(order);
-  const checkout = await provider.prepare({ orderId: order.orderId, amount: order.amount, orderName: ORDER_NAME });
-  return { orderId: order.orderId, amount: order.amount, orderName: ORDER_NAME, test: provider.isTest, checkout };
+  try {
+    await store.createOrder(order);
+  } catch (e) {
+    // 같은 계정의 주문 요청이 동시에 들어와 다른 요청이 먼저 pending 주문을 만든 경우(유니크 위반): 그 주문을 이어 쓴다
+    if (!(e instanceof ConflictError)) throw e;
+    const won = await store.findPendingOrder(userId);
+    if (!won) throw e;
+    return resume(won);
+  }
+  return respond(order, false);
 }
 
 /**
@@ -41,12 +68,19 @@ export async function createOrder(store: PaymentStore, provider: PaymentProvider
  * 이미 다른 주문으로 이용권이 있으면 이용권은 그대로 두고 duplicate로 알린다(처리 방침은 결정 필요: docs/payments-plan.md).
  */
 async function markPaid(store: PaymentStore, order: Order, paymentId: string) {
-  const moved = await store.transition(order.orderId, ['pending'], 'paid', { paymentId });
-  if (!moved) return { applied: false, duplicate: false };
-  const ent = await store.getEntitlement(order.userId);
-  if (ent?.status === 'active' && ent.orderId !== order.orderId) return { applied: true, duplicate: true };
-  await store.grantEntitlement(order.userId, order.orderId);
-  return { applied: true, duplicate: false };
+  let moved: Order | null;
+  try {
+    moved = await store.transition(order.orderId, ['pending'], 'paid', { paymentId });
+  } catch (e) {
+    // 결제사 거래 식별자가 이미 다른 주문에 기록됨(DB 유니크 위반): 이 주문은 실패로 닫고 이용권을 주지 않는다
+    if (!(e instanceof ConflictError)) throw e;
+    await store.transition(order.orderId, ['pending'], 'failed');
+    return { applied: false, duplicate: false, conflict: true };
+  }
+  if (!moved) return { applied: false, duplicate: false, conflict: false };
+  // 이미 있으면 무시: 같은 계정의 다른 주문이 먼저(또는 동시에) 이용권을 받았으면 이 주문은 paid로만 남는다
+  const granted = await store.grantEntitlement(order.userId, order.orderId);
+  return { applied: true, duplicate: !granted, conflict: false };
 }
 
 /** 환불·취소된 주문을 refunded로 바꾸고, 그 주문으로 받은 이용권을 회수한다 */
@@ -81,6 +115,7 @@ export async function confirmPayment(store: PaymentStore, provider: PaymentProvi
     return { error: 'amount_mismatch' } as const;
   }
   const m = await markPaid(store, order, r.paymentId);
+  if (m.conflict) return { error: 'payment_conflict' } as const;
   if (!m.applied) {
     // 동시에 다른 요청(확인·웹훅)이 먼저 반영함
     const now = await store.getOrder(order.orderId);
@@ -109,7 +144,7 @@ export async function applyEvent(store: PaymentStore, ev: PaymentEvent) {
   if (ev.type === 'paid') {
     if (!ev.paymentId) return { applied: false, reason: 'payment_id_missing' };
     const m = await markPaid(store, order, ev.paymentId);
-    return { applied: m.applied, duplicate: m.duplicate };
+    return m.conflict ? { applied: false, reason: 'payment_id_conflict' } : { applied: m.applied, duplicate: m.duplicate };
   }
   if (ev.type === 'failed') return { applied: !!(await store.transition(order.orderId, ['pending'], 'failed')) };
   // canceled·refunded: 결제 전이면 취소, 결제 뒤면 환불(이용권 회수)

@@ -135,6 +135,7 @@ export type ApiErrorCode =
   | 'order_forbidden'
   | 'amount_mismatch'
   | 'order_state'
+  | 'payment_conflict'
   | 'payment_unavailable'
   | 'webhook_invalid';
 

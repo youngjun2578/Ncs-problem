@@ -39,6 +39,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   order_forbidden: '이 주문을 처리할 수 없습니다.',
   amount_mismatch: '결제 금액이 주문과 맞지 않습니다.',
   order_state: '이미 처리된 주문입니다.',
+  payment_conflict: '결제 정보가 다른 주문과 겹쳐 처리하지 못했습니다. 이용권은 적용되지 않았습니다. 문의해 주세요.',
   payment_unavailable: '결제 서비스에 잠시 연결할 수 없습니다. 잠시 뒤 다시 시도해 주세요.',
   webhook_invalid: '알림 서명이 올바르지 않습니다.',
 };
@@ -60,6 +61,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   order_forbidden: 403,
   amount_mismatch: 400,
   order_state: 409,
+  payment_conflict: 409,
   payment_unavailable: 503,
   webhook_invalid: 401,
 };

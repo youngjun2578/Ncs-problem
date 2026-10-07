@@ -43,8 +43,10 @@ function wrap(where: string, f: () => Promise<Response>): Promise<Response> {
   return f().catch((e) => (e instanceof StoreError ? apiError('service_unavailable') : fail(where, e)));
 }
 
-const toResponse = (r: { error?: string } & Record<string, unknown>) =>
-  'error' in r && r.error ? apiError(r.error === 'provider_unavailable' ? 'payment_unavailable' : (r.error as Parameters<typeof apiError>[0])) : json(200, r);
+const toResponse = (r: { error?: string; message?: string } & Record<string, unknown>) =>
+  'error' in r && r.error
+    ? apiError(r.error === 'provider_unavailable' ? 'payment_unavailable' : (r.error as Parameters<typeof apiError>[0]), r.message)
+    : json(200, r);
 
 /** POST /api/payments/order: 주문 만들기(로그인 필요). 응답: 주문번호, 금액(서버 상수), 상품 이름, 시험 결제 여부, 결제창 정보 */
 export function handlePaymentOrder(req: Request): Promise<Response> {
