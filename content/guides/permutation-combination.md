@@ -3,7 +3,7 @@ slug: permutation-combination
 title: "경우의 수: 순열과 조합 구분하기"
 description: 뽑은 사람의 역할이 다르면 순열, 같으면 조합이라는 기준으로 경우의 수를 세는 방법과, 여러 번 고를 때 곱하는 이유를 예제로 정리합니다.
 area: 기초통계
-status: draft
+status: published
 updated: 2026-10-05
 related: [ncs-math-overview, probability-fraction]
 ---

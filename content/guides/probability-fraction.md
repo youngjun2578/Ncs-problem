@@ -3,7 +3,7 @@ slug: probability-fraction
 title: "확률 계산: 기약분수로 정리하는 습관"
 description: 전체 경우의 수와 원하는 경우의 수를 세어 확률을 구하고, 분자와 분모를 최대공약수로 나누어 기약분수로 정리하는 방법을 꺼내기, 주사위 예제로 정리합니다.
 area: 기초통계
-status: draft
+status: published
 updated: 2026-10-05
 related: [mean-median, permutation-combination]
 ---

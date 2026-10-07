@@ -4,7 +4,7 @@ title: NCS 수리능력, 4개 영역 한눈에 보기
 description: NCS 수리능력을 기초연산·기초통계·도표분석·도표작성 4개 영역으로 나누어, 영역마다 어떤 유형이 나오고 어떤 순서로 공부하면 좋은지 정리한 안내 글입니다.
 area: 종합
 status: published
-updated: 2026-10-05
+updated: 2026-10-07
 related: [speed-round-trip-average, graph-type-choice, permutation-combination]
 ---
 
@@ -49,8 +49,8 @@ NCS 직업기초능력의 수리능력은 업무에서 마주치는 수치를 �
 
 | 영역 | 가이드 |
 | --- | --- |
-| 기초연산 | [속력·거리·시간](/guide/speed-round-trip-average/), [농도](/guide/concentration-mix-water-evaporation/), 일의 양 (준비 중), [증가율과 증가량](/guide/growth-rate-change/) |
-| 기초통계 | 평균과 중앙값 (준비 중), 순열과 조합 (준비 중), 확률 (준비 중) |
+| 기초연산 | [속력·거리·시간](/guide/speed-round-trip-average/), [농도](/guide/concentration-mix-water-evaporation/), [일의 양](/guide/work-rate-one-unit/), [증가율과 증가량](/guide/growth-rate-change/) |
+| 기초통계 | [평균과 중앙값](/guide/mean-median/), [순열과 조합](/guide/permutation-combination/), [확률](/guide/probability-fraction/) |
 | 도표분석 | [%와 %p, 비중](/guide/percent-point-share/) |
 | 도표작성 | [그래프 종류 고르기](/guide/graph-type-choice/) |
 

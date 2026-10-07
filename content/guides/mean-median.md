@@ -3,7 +3,7 @@ slug: mean-median
 title: 평균과 중앙값, 평균이 속이는 경우
 description: 인원이 다른 두 집단의 전체 평균, 목표 평균을 맞추는 점수, 자료를 정렬해 구하는 중앙값을 예제로 다루고, 평균만 보면 자료를 잘못 읽게 되는 경우를 정리합니다.
 area: 기초통계
-status: draft
+status: published
 updated: 2026-10-05
 related: [speed-round-trip-average, concentration-mix-water-evaporation, probability-fraction]
 ---
